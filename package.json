@@ -20,11 +20,21 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@biconomy/account": "^4.5.4",
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
+    "@nestjs/microservices": "^10.3.10",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/typeorm": "^10.0.2",
+    "amqp-connection-manager": "^4.1.14",
+    "amqplib": "^0.10.4",
+    "dotenv": "^16.4.5",
+    "erc-20-abi": "^1.0.1",
+    "mysql2": "^3.10.3",
     "reflect-metadata": "^0.2.0",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "typeorm": "^0.3.20",
+    "viem": "^2.18.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
