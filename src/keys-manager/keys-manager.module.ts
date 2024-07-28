@@ -9,6 +9,7 @@ import { PrivateKeys } from './entities/private-key.entity';
     TypeOrmModule.forFeature([PrivateKeys]),
   ],
   controllers: [KeysManagerController],
-  providers: [KeysManagerService]
+  providers: [KeysManagerService],
+  exports: [KeysManagerService],
 })
 export class KeysManagerModule {}

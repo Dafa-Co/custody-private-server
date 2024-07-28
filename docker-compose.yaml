@@ -1,0 +1,11 @@
+services:
+
+  backend:
+    build:
+      context: .
+      target: development
+    ports:
+      - "4005:4000"
+    env_file:
+      - .env
+    command: sleep 5000000

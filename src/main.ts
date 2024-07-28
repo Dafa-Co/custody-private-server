@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { RmqOptions, Transport } from '@nestjs/microservices';
 import configs from './utils/configs/configs';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+
+  console.log('RABBITMQ_URL:', configs.RABBITMQ_URL, configs.RABBITMQ_CUSTODY_PRIVATE_SERVER_QUEUE_NAME);
 
     // Create RabbitMQ microservice
     app.connectMicroservice<RmqOptions>({
@@ -19,6 +21,7 @@ async function bootstrap() {
       },
     });
 
+    app.startAllMicroservices()
 
 
   await app.init();

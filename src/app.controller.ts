@@ -1,12 +1,24 @@
-import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
+import { Controller, Get, Query } from '@nestjs/common';
+
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+  ) {
+  }
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  index() {
+    return {
+      message: 'Custody solution api is up and running',
+    };
   }
+
+  @Get('health-check')
+  healthCheck() {
+    return {
+      message: 'Health Check Is Succeed',
+    };
+  }
+
 }

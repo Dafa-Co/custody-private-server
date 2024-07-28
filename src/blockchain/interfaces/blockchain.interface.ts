@@ -1,5 +1,5 @@
-import { TransactionStatus } from "src/utils/enums/transaction.enum";
-import { SignedTransaction } from "src/utils/types/signed-transaction.type";
+import { TransactionStatus } from "../../utils/enums/transaction.enum";
+import { SignedTransaction } from "../../utils/types/custom-signed-transaction.type";
 
 export interface IWalletKeys {
     privateKey: string;
