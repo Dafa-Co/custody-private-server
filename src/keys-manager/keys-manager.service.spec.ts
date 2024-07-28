@@ -81,7 +81,6 @@ describe('KeysManagerService', () => {
   it('should return the full private key when call getFullPrivateKey', async () => {
     const keyPair = await service.generateKeyPair(testAsset, testNetwork);
     const fullPrivateKey = await service.getFullPrivateKey(keyPair.keyId, keyPair.HalfOfPrivateKey);
-    console.log('fullPrivateKey', fullPrivateKey);
     expect(fullPrivateKey).toBeDefined();
   });
 

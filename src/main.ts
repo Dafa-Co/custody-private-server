@@ -7,8 +7,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
 
-  console.log('RABBITMQ_URL:', configs.RABBITMQ_URL, configs.RABBITMQ_CUSTODY_PRIVATE_SERVER_QUEUE_NAME);
-
     // Create RabbitMQ microservice
     app.connectMicroservice<RmqOptions>({
       transport: Transport.RMQ, // Set transport to RabbitMQ

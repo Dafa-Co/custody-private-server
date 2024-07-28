@@ -23,8 +23,6 @@ export class AccountAbstraction implements IBlockChain {
       this.asset = asset;
       const networkObject = getChainFromNetwork(network.networkId);
       this.chain = networkObject.chain;
-      // const secrets = JSON.parse(fs.readFileSync('./', 'utf8'));
-      // console.log('secrets', secrets);
       const bundlerSecret = networkObject.isTest
         ? 'nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44'
         : 'dewj2189.wh1289hU-7E49-78td-af80-f9RbQ2mJs';
