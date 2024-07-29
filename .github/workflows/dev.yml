@@ -14,7 +14,7 @@ jobs:
         PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         HOST: 49.13.230.22
         USER: root
-        container_name: custody-priv-server
+        container_name: custody-priv-server-dev
       run: |
         echo "$PRIVATE_KEY" > private_key 
         chmod 600 private_key
