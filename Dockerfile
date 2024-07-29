@@ -1,14 +1,16 @@
-# base stage to have npm installed
-FROM node:20-alpine3.18 AS base
-
-# development stage
-#FROM base AS development
+FROM node:20-slim as builder
 ARG NODE_ENV=development
 ENV NODE_ENV=${NODE_ENV}
+
+USER node
 WORKDIR /usr/src/app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-# Add an env to save ARG
-CMD ["npm","run","start:dev"]
+
+COPY --chown=node:node package*.json ./
+
+RUN npm i
+
+COPY --chown=node:node . .
+
+EXPOSE 4000
+CMD [ "npm","run","start:dev"]
+
