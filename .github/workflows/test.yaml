@@ -23,4 +23,4 @@ jobs:
            git pull
            docker build -t $container_name .
            docker rm -f $container_name
-           docker run -d -p 4016:4000 --name=$container_name --restart=unless-stopped  $container_name "
+           docker run -d -p 127.0.0.1:4020:3000 --name=$container_name --restart=unless-stopped  $container_name "
