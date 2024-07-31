@@ -6,7 +6,6 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-
     // Create RabbitMQ microservice
     app.connectMicroservice<RmqOptions>({
       transport: Transport.RMQ, // Set transport to RabbitMQ
@@ -23,6 +22,5 @@ async function bootstrap() {
 
 
   await app.init();
-  await app.listen(3000);
 }
 bootstrap();

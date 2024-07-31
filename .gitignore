@@ -41,3 +41,4 @@ logs/*
 public/files/*
 package-lock.json
 env-files*
+account-secrets.*
