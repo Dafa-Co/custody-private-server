@@ -16,8 +16,14 @@ interface accountAbstractionSecrets {
   };
 }
 
-const returnSecret = (type: secretsTypes, key: string) => {
-  return keysData[type][key];
+const returnSecret = (type: secretsTypes, key: string, throwIfNotFound: boolean = false) => {
+  const secret = keysData[type][key];
+
+  if(!secret && throwIfNotFound) {
+    throw new InternalServerErrorException(`Secret not found for ${type} and key ${key}`);
+  }
+
+  return secret;
 };
 
 export enum secretsTypes {
@@ -27,8 +33,8 @@ export enum secretsTypes {
 
 const ACCOUNT_ABSTRACTION_SECRETS: accountAbstractionSecrets = {
   bundler: {
-    mainnet: returnSecret(secretsTypes.bundler, 'mainnet'),
-    testnet: returnSecret(secretsTypes.bundler, 'testnet'),
+    mainnet: returnSecret(secretsTypes.bundler, 'mainnet', true),
+    testnet: returnSecret(secretsTypes.bundler, 'testnet', true),
   },
   paymaster: {},
 };
