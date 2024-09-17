@@ -81,7 +81,7 @@ export class AccountAbstraction implements IBlockChainPrivateServer {
   ): Promise<SignedTransaction> {
     const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
 
-    const valueSmallUnit = BigInt(amount * 10 ** this.chain.nativeCurrency.decimals);
+    const valueSmallUnit = BigInt(amount * 10 ** this.asset.decimals);
 
     // Create a transaction object
     const transaction = await smartAccount.buildUserOp(
@@ -108,7 +108,7 @@ export class AccountAbstraction implements IBlockChainPrivateServer {
     const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
 
     // Create a contract instance
-    const valueSmallUnit = BigInt(amount * 10 ** this.chain.nativeCurrency.decimals);
+    const valueSmallUnit = BigInt(amount * 10 ** this.asset.decimals);
 
     const encodedCall = encodeFunctionData({
       abi: abi,

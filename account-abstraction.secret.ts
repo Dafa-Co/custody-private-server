@@ -31,7 +31,7 @@ export enum secretsTypes {
   paymaster = 'paymaster',
 }
 
-const ACCOUNT_ABSTRACTION_SECRETS: accountAbstractionSecrets = {
+export const ACCOUNT_ABSTRACTION_SECRETS: accountAbstractionSecrets = {
   bundler: {
     mainnet: returnSecret(secretsTypes.bundler, 'mainnet', true),
     testnet: returnSecret(secretsTypes.bundler, 'testnet', true),
