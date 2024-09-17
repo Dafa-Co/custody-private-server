@@ -5,7 +5,6 @@ dotenv.config();
 
 export default {
   // general
-  APP_URL: process.env.APP_URL || 'http://localhost:4000',
   APP_NAME: process.env.APP_NAME || 'custody_super_admin',
   NODE_ENV: process.env.NODE_ENV || 'DEVELOPMENT',
 
