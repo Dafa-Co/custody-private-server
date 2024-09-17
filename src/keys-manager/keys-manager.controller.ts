@@ -10,7 +10,6 @@ export class KeysManagerController {
 
   @MessagePattern({ cmd: _MessagePatterns.generateKey })
   async generateKey(@Payload() dto: generateKeyPair) {
-
     return this.keysManagerService.generateKeyPair(dto);
   }
 }
