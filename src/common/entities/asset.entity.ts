@@ -20,6 +20,6 @@ export class AssetEntity {
     contract_address: string;
     status: AssetStatus;
     type: AssetType;
-    token_decimal: number;
+    decimals: number;
     network: NetworkEntity;
 }

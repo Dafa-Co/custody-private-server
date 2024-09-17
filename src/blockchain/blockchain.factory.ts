@@ -31,7 +31,6 @@ export class BlockchainFactory {
     const { networkId } = this.network;
     const chain = getChainFromNetwork(networkId);
 
-
     switch (chain.library) {
 
       case gaslessLibrary.AccountAbstraction:
