@@ -2,7 +2,7 @@ import { Transaction, UserOperationStruct } from "@biconomy/account";
 
 
 
-export type SignedTransaction = UserOperationStruct;
+export type SignedTransaction = UserOperationStruct | string;
 
 
 export class CustodySignedTransaction {

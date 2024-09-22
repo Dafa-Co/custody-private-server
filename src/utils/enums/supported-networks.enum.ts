@@ -685,9 +685,14 @@ export enum supportedNetworks {
   zoraSepolia,
   zoraTestnet,
   zircuitTestnet,
+
+
+  // bitcoin testnet
+  bitcoinTestnet,
+
 }
 
-export enum netowkrsTypes {
+export enum GasNetworkType {
   gasless,
   withGas,
 }
@@ -710,7 +715,7 @@ export enum withGasLibrary {
 
 export interface networkData {
   chain: Chain;
-  type: netowkrsTypes;
+  type: GasNetworkType;
   library?: gaslessLibrary | withGasLibrary;
   isTest: boolean;
   category: NetworkCategory;
@@ -747,7 +752,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Ethereum:
           return {
             chain: mainnet,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             library: gaslessLibrary.AccountAbstraction,
             isTest: false,
             category: NetworkCategory.EVM,
@@ -755,7 +760,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Polygon:
           return {
             chain: polygon,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             library: gaslessLibrary.AccountAbstraction,
             isTest: false,
             category: NetworkCategory.EVM,
@@ -763,7 +768,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.BSC:
           return {
             chain: bsc,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -771,7 +776,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Polygon_zkEVM:
           return {
             chain: polygonZkEvm,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -779,7 +784,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Arbitrum_One:
           return {
             chain: arbitrum,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -787,7 +792,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Arbitrum_Nova:
           return {
             chain: arbitrumNova,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -795,7 +800,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Optimism:
           return {
             chain: optimism as Chain,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -803,7 +808,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Avalanche:
           return {
             chain: avalanche,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -811,7 +816,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Base:
           return {
             chain: base as Chain,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -819,7 +824,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Linea:
           return {
             chain: linea,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -827,7 +832,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Chiliz:
           return {
             chain: chiliz,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -835,7 +840,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Astar:
           return {
             chain: astar,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -843,7 +848,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.opBNB:
           return {
             chain: opBNB,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -851,7 +856,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Manta:
           return {
             chain: manta,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -859,7 +864,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Core:
           return {
             chain: coreDao,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -869,7 +874,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Mantle:
           return {
             chain: mantle,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -877,7 +882,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Blast:
           return {
             chain: blast,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -887,7 +892,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Scroll:
           return {
             chain: scroll,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -897,7 +902,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Zetachain:
           return {
             chain: zetachain,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -912,7 +917,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Polygon_zkEVM_Cardona:
           return {
             chain: polygonZkEvmCardona,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -920,7 +925,7 @@ export const biconomyWithChainMainnet = (
         case supportedNetworks.Gnosis:
           return {
             chain: gnosis,
-            type: netowkrsTypes.gasless,
+            type: GasNetworkType.gasless,
             isTest: false,
             library: gaslessLibrary.AccountAbstraction,
             category: NetworkCategory.EVM,
@@ -940,15 +945,24 @@ export const withGasChainMainnet = (
       return {
         chain: null,
         isTest: false,
-        type: netowkrsTypes.withGas,
+        type: GasNetworkType.withGas,
         library: withGasLibrary.bitcoin,
         category: NetworkCategory.BitCoin,
       };
+      case supportedNetworks.bitcoinTestnet:
+        return {
+          chain: null,
+          isTest: true,
+          type: GasNetworkType.withGas,
+          library: withGasLibrary.bitcoin,
+          category: NetworkCategory.BitCoin,
+        };
+
     case supportedNetworks.steller:
       return {
         chain: null,
         isTest: false,
-        type: netowkrsTypes.withGas,
+        type: GasNetworkType.withGas,
         library: withGasLibrary.stellar,
         category: NetworkCategory.steller,
       };
@@ -956,7 +970,7 @@ export const withGasChainMainnet = (
       return {
         chain: null,
         isTest: false,
-        type: netowkrsTypes.withGas,
+        type: GasNetworkType.withGas,
         library: withGasLibrary.terra,
         category: NetworkCategory.EVM,
       };
@@ -964,7 +978,7 @@ export const withGasChainMainnet = (
       return {
         chain: null,
         isTest: false,
-        type: netowkrsTypes.withGas,
+        type: GasNetworkType.withGas,
         library: withGasLibrary.tron,
         category: null,
       };
@@ -972,7 +986,7 @@ export const withGasChainMainnet = (
       return {
         chain: null,
         isTest: false,
-        type: netowkrsTypes.withGas,
+        type: GasNetworkType.withGas,
         library: withGasLibrary.polkadot,
         category: null,
       };
@@ -980,7 +994,7 @@ export const withGasChainMainnet = (
       return {
         chain: null,
         isTest: false,
-        type: netowkrsTypes.withGas,
+        type: GasNetworkType.withGas,
         library: withGasLibrary.ripple,
         category: null,
       };
@@ -988,7 +1002,7 @@ export const withGasChainMainnet = (
       return {
         chain: null,
         isTest: false,
-        type: netowkrsTypes.withGas,
+        type: GasNetworkType.withGas,
         library: withGasLibrary.solana,
         category: null,
       };
@@ -1012,7 +1026,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.goerli:
       return {
         chain: goerli,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1020,7 +1034,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.sepolia:
       return {
         chain: sepolia,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1030,7 +1044,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.polygonAmoy:
       return {
         chain: polygonAmoy,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1040,7 +1054,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.polygonMumbai:
       return {
         chain: polygonMumbai,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1050,7 +1064,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.bscTestnet:
       return {
         chain: bscTestnet,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1060,7 +1074,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.PolygonZkEvmTestnet:
       return {
         chain: polygonZkEvmTestnet,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1070,7 +1084,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.arbitrumGoerli:
       return {
         chain: arbitrumGoerli,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1080,7 +1094,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.arbitrumSepolia:
       return {
         chain: arbitrumSepolia,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1092,7 +1106,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.optimismGoerli:
       return {
         chain: optimismGoerli as Chain,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1100,7 +1114,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.optimismSepolia:
       return {
         chain: optimismSepolia as Chain,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1111,7 +1125,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.avalancheFuji:
       return {
         chain: avalancheFuji,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1121,7 +1135,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.BaseGoerli:
       return {
         chain: baseGoerli as Chain,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1131,7 +1145,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.BaseSepolia:
       return {
         chain: baseSepolia as Chain,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1142,7 +1156,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.LineaGoerli:
       return {
         chain: lineaGoerli,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1153,7 +1167,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.LineaSepolia:
       return {
         chain: lineaSepolia,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1163,7 +1177,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.lineaTestnet:
       return {
         chain: lineaTestnet,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1173,7 +1187,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.spicy:
       return {
         chain: chiliz,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1183,7 +1197,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.astarZkEVM:
       return {
         chain: astarZkEVM,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1192,7 +1206,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.astarZkyoto:
       return {
         chain: astarZkyoto,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1202,7 +1216,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.opBNBTestnet:
       return {
         chain: opBNBTestnet,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1212,7 +1226,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.MantaSepoliaTestnet:
       return {
         chain: mantaSepoliaTestnet,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1222,7 +1236,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.mantaTestnet:
       return {
         chain: mantaTestnet,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1233,7 +1247,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.MantleSepoliaTestnet:
       return {
         chain: mantleSepoliaTestnet,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1242,7 +1256,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.mantleTestnet:
       return {
         chain: mantleTestnet,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1252,7 +1266,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.blastSepolia:
       return {
         chain: blastSepolia,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1263,7 +1277,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.ScrollSepolia:
       return {
         chain: scrollSepolia,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1274,7 +1288,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.ZetachainAthensTestnet:
       return {
         chain: zetachainAthensTestnet,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
@@ -1285,7 +1299,7 @@ export const biconomyWithChainTestNet = (
     case supportedNetworks.gnosisChiado:
       return {
         chain: gnosisChiado,
-        type: netowkrsTypes.gasless,
+        type: GasNetworkType.gasless,
         library: gaslessLibrary.AccountAbstraction,
         isTest: true,
         category: NetworkCategory.EVM,
