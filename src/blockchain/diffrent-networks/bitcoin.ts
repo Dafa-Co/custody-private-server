@@ -1,6 +1,6 @@
 import { NetworkEntity } from 'src/common/entities/network.entity';
 import { AssetEntity } from 'src/common/entities/asset.entity';
-import { CustodySignedTransaction } from 'src/utils/types/custom-signed-transaction.type';
+import { BitcoinTransaction, CustodySignedTransaction } from 'src/utils/types/custom-signed-transaction.type';
 import {
   IBlockChainPrivateServer,
   IWalletKeys,
@@ -11,6 +11,7 @@ import { ECPairAPI, ECPairFactory, ECPairInterface } from "ecpair";
 import * as ecc from 'tiny-secp256k1';
 import axios, { AxiosInstance } from 'axios';
 import { UTXO } from 'src/utils/types/utxos';
+import { BadRequestException } from '@nestjs/common';
 
 export class BitCoinFactory implements IBlockChainPrivateServer {
   private asset: AssetEntity;
@@ -27,9 +28,6 @@ export class BitCoinFactory implements IBlockChainPrivateServer {
     const networkObject = getChainFromNetwork(network.networkId);
 
     this.NetworkString = networkObject.isTest ? 'testnet' : 'main';
-    console.log("NetworkString", this.NetworkString)
-
-
 
     this.bitcoinNetwork = networkObject.isTest
       ? networks.testnet
@@ -68,28 +66,28 @@ export class BitCoinFactory implements IBlockChainPrivateServer {
   async getSignedTransaction(
     privateKey: string,
     to: string,
-    amount: number, // amount in satoshis
+    bitcoinAmount: number, // amount in satoshis
   ): Promise<CustodySignedTransaction> {
     try {
+
+
+      const amount = Math.floor(bitcoinAmount * (10 ** this.asset.decimals));
+
+
       // Step 1: Reconstruct the key pair from the private key
       const keyPair = this.ECPair.fromWIF(privateKey, this.bitcoinNetwork);
-
       // Step 2: Derive the sender's address (fromAddress)
       const { address: fromAddress } = payments.p2pkh({
         pubkey: keyPair.publicKey,
         network: this.bitcoinNetwork,
       });
-
       // Step 3: Fetch UTXOs for the sender's address
       const utxos = await this.fetchUTXOs(fromAddress);
-
       if (utxos.length === 0) {
-        throw new Error('No UTXOs available for the address.');
+        throw new BadRequestException('No UTXOs available for the address.');
       }
-
       // Step 4: Create a new Psbt (Partially Signed Bitcoin Transaction)
       const psbt = new Psbt({ network: this.bitcoinNetwork });
-
       let inputSum = 0;
 
       // Step 5: Add inputs (UTXOs) to the Psbt
@@ -102,7 +100,6 @@ export class BitCoinFactory implements IBlockChainPrivateServer {
         });
         inputSum += utxo.value;
       }
-
       // Step 6: Estimate the transaction fee
       const feeRate = 1; // Satoshis per byte (adjust as needed)
       const inputCount = utxos.length;
@@ -113,6 +110,7 @@ export class BitCoinFactory implements IBlockChainPrivateServer {
       // Step 7: Calculate the change amount
       let change = inputSum - amount - fee;
       const dustLimit = 546; // Minimum amount for change output
+
 
       if (change < dustLimit) {
         // If change is too small, add it to the fee
@@ -126,12 +124,14 @@ export class BitCoinFactory implements IBlockChainPrivateServer {
         }
       }
 
+
       // Step 8: Add outputs to the Psbt
       // Add recipient output
       psbt.addOutput({
         address: to,
         value: amount,
       });
+
 
       // Add change output if applicable
       if (change > 0) {
@@ -141,6 +141,7 @@ export class BitCoinFactory implements IBlockChainPrivateServer {
         });
       }
 
+
       // Step 9: Create a custom Signer object
       const signer: Signer = {
         publicKey: Buffer.from(keyPair.publicKey),
@@ -149,10 +150,12 @@ export class BitCoinFactory implements IBlockChainPrivateServer {
         },
       };
 
+
       // Step 10: Sign each input using the custom signer
       for (let i = 0; i < utxos.length; i++) {
         psbt.signInput(i, signer);
       }
+
 
       // Step 11: Validate signatures
       const validator = (
@@ -163,22 +166,33 @@ export class BitCoinFactory implements IBlockChainPrivateServer {
         return ecc.verify(msghash, pubkey, signature);
       };
 
+
       const isValid = psbt.validateSignaturesOfAllInputs(validator);
 
       if (!isValid) {
         throw new Error('Signature validation failed.');
       }
 
+
       // Step 12: Finalize the transaction
       psbt.finalizeAllInputs();
+
 
       // Step 13: Extract the raw transaction hex
       const txHex = psbt.extractTransaction().toHex();
 
+
+      const signedTransaction: BitcoinTransaction = {
+        fees: fee,
+        signedTransaction: txHex,
+      }
+
+      // how to get the url from the api
+
       // Step 15: Return the signed transaction
       const signedTx: CustodySignedTransaction = {
-        signedTransaction: txHex,
-        bundlerUrl: null,
+        signedTransaction: signedTransaction,
+        bundlerUrl: this.api.defaults.baseURL + '/tx',
       };
 
       return signedTx;

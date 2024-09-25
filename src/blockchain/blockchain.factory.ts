@@ -35,8 +35,6 @@ export class BlockchainFactory {
 
     const chain = getChainFromNetwork(networkId);
 
-    console.log(networkId, "chain", chain)
-
     const { library, type } = chain;
 
     switch (type) {
