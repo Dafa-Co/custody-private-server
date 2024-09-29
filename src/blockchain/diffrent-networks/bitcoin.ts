@@ -27,7 +27,7 @@ export class BitCoinFactory implements IBlockChainPrivateServer {
     this.network = network;
     const networkObject = getChainFromNetwork(network.networkId);
 
-    this.NetworkString = networkObject.isTest ? 'testnet' : 'main';
+    this.NetworkString = networkObject.isTest ? 'testnet' : '';
 
     this.bitcoinNetwork = networkObject.isTest
       ? networks.testnet
@@ -62,6 +62,16 @@ export class BitCoinFactory implements IBlockChainPrivateServer {
       address: address!,
     };
   }
+
+    // Fetch current fee rate (in sat/vB) from a public API like mempool.space
+    async getFeeRate(): Promise<number> {
+      const response = await fetch(
+        'https://mempool.space/api/v1/fees/recommended',
+      );
+      const data = await response.json();
+      return data.hourFee | 2; // Medium priority fee rate
+    }
+
 
   async getSignedTransaction(
     privateKey: string,
@@ -101,7 +111,7 @@ export class BitCoinFactory implements IBlockChainPrivateServer {
         inputSum += utxo.value;
       }
       // Step 6: Estimate the transaction fee
-      const feeRate = 1; // Satoshis per byte (adjust as needed)
+      const feeRate = await this.getFeeRate(); // Satoshis per byte (adjust as needed)
       const inputCount = utxos.length;
       let outputCount = 2; // Assuming a change output
       let estimatedTxSize = inputCount * 148 + outputCount * 34 + 10;
