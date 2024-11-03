@@ -1,6 +1,4 @@
 FROM node:20-slim as builder
-ARG NODE_ENV=development
-ENV NODE_ENV=${NODE_ENV}
 
 USER node
 WORKDIR /usr/src/app
