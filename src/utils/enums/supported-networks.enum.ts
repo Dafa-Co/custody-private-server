@@ -309,6 +309,7 @@ export enum NetworkCategory {
   BitCoin,
   Solana,
   steller,
+  Tron
 }
 
 export enum supportedNetworks {
@@ -690,6 +691,9 @@ export enum supportedNetworks {
   // bitcoin testnet
   bitcoinTestnet,
 
+  // tron testnet
+  shastaTestnet,
+  nileTestnet
 }
 
 export enum GasNetworkType {
@@ -699,6 +703,7 @@ export enum GasNetworkType {
 
 export enum gaslessLibrary {
   AccountAbstraction,
+  Tron
 }
 
 export enum withGasLibrary {
@@ -739,8 +744,10 @@ export const getChainFromNetwork = (
   if (chain) {
     return chain;
   }
-
-
+  chain = getTronChain(network);
+  if(chain) {
+    return chain;
+  }
 };
 
 export const biconomyWithChainMainnet = (
@@ -949,7 +956,7 @@ export const withGasChainMainnet = (
         library: withGasLibrary.bitcoin,
         category: NetworkCategory.BitCoin,
       };
-      case supportedNetworks.bitcoinTestnet:
+    case supportedNetworks.bitcoinTestnet:
         return {
           chain: null,
           isTest: true,
@@ -973,14 +980,6 @@ export const withGasChainMainnet = (
         type: GasNetworkType.withGas,
         library: withGasLibrary.terra,
         category: NetworkCategory.EVM,
-      };
-    case supportedNetworks.tron:
-      return {
-        chain: null,
-        isTest: false,
-        type: GasNetworkType.withGas,
-        library: withGasLibrary.tron,
-        category: null,
       };
     case supportedNetworks.polkadot:
       return {
@@ -1311,3 +1310,81 @@ export const biconomyWithChainTestNet = (
 
   return null;
 };
+
+const tronChain: Chain = {
+  name: "Tron",
+  nativeCurrency: {
+    name: "Tron",
+    symbol: "TRX",
+    decimals: 6,
+  },
+  blockExplorers: {
+    default: {
+      name: "Tronscan",
+      url: "https://tronscan.org",
+    }
+  },
+  id: 1,
+  rpcUrls: {
+    default: {
+      http: [],
+      webSocket: []
+    }
+  }
+}
+
+const tronTestnetShastaChain: Chain = {
+  ...tronChain,
+  blockExplorers: {
+    default: {
+      ...tronChain.blockExplorers.default,
+      url: "https://shasta.tronscan.org/"
+    },
+  },
+}
+
+const tronTestnetNileChain: Chain = {
+  ...tronChain,
+  blockExplorers: {
+    default: {
+      ...tronChain.blockExplorers.default,
+      url: "https://nile.tronscan.org/"
+    },
+  },
+}
+
+export const getTronChain = (
+  network: supportedNetworks,
+): networkData => {
+
+  switch (network) {
+    case supportedNetworks.tron:
+      return {
+        chain: tronChain,
+        isTest: false,
+        type: GasNetworkType.gasless,
+        category: NetworkCategory.Tron,
+        library: gaslessLibrary.Tron,
+      };
+
+    case supportedNetworks.shastaTestnet:
+      return {
+        chain: tronTestnetShastaChain,
+        isTest: true,
+        type: GasNetworkType.gasless,
+        category: NetworkCategory.Tron,
+        library: gaslessLibrary.Tron,
+      };
+
+    case supportedNetworks.nileTestnet:
+    return {
+      chain: tronTestnetNileChain,
+      isTest: true,
+      type: GasNetworkType.gasless,
+      category: NetworkCategory.Tron,
+      library: gaslessLibrary.Tron,
+    };
+  }
+
+  return null;
+}

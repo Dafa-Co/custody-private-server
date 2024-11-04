@@ -1,5 +1,6 @@
 import { AssetEntity } from '../common/entities/asset.entity';
 import {
+  factoryInitParameter,
   IBlockChainPrivateServer,
   ITransferTransactionEnum,
   IWalletKeys,
@@ -18,6 +19,7 @@ import {
 import { AccountAbstraction } from './diffrent-networks/account-abstraction';
 import { withGasLibrary } from 'utils/enums/supported-networks.enum';
 import { BitCoinFactory } from './diffrent-networks/bitcoin';
+import { TronBlockchain } from './diffrent-networks/tron-blockchain';
 
 export class BlockchainFactory {
   private asset: AssetEntity;
@@ -66,13 +68,16 @@ export class BlockchainFactory {
       case gaslessLibrary.AccountAbstraction:
         return new AccountAbstraction(this.asset, this.network);
 
+      case gaslessLibrary.Tron:
+        return new TronBlockchain(this.asset, this.network);
+
       default:
         throw new InternalServerErrorException('Invalid wallet type');
     }
   }
 
-  async init(): Promise<void> {
-    await this.factory.init();
+  async init(object: factoryInitParameter): Promise<void> {
+    await this.factory.init(object);
     return;
   }
 

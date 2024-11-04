@@ -14,7 +14,8 @@ export enum NetworkStatus {
 export enum NetworkCategory {
   EVM = 0,
   BitCoin,
-  BitcoinTest
+  BitcoinTest,
+  Tron
 }
 export class NetworkEntity {
   name: string;

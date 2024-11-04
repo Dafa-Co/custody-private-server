@@ -24,8 +24,10 @@ export interface ITransferTransactionEnum {
     }
 }
 
+export type factoryInitParameter = string | null;
+
 export interface IBlockChainPrivateServer {
-  init(): Promise<void>;
+  init(object: factoryInitParameter): Promise<void>;
   createWallet(): Promise<IWalletKeys>;
   getSignedTransaction(
     privateKey: string,

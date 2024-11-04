@@ -17,11 +17,11 @@ export class SigningTransactionService {
     ): Promise<CustodySignedTransaction>
      {
         const { asset, network, keyId, secondHalf, to, amount } = dto;
-
-        const blockchainFactory = new BlockchainFactory(asset, network);
-        await blockchainFactory.init();
-
+        
         const privateKey = await this.keyManagerService.getFullPrivateKey(keyId, secondHalf);
+        
+        const blockchainFactory = new BlockchainFactory(asset, network);
+        await blockchainFactory.init(privateKey);
 
         return await blockchainFactory.getSignedTransaction(privateKey, to, amount);
     }
