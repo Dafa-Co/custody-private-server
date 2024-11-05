@@ -1,4 +1,4 @@
-import { supportedNetworks } from "src/utils/enums/supported-networks.enum";
+import { supportedNetworks } from "utils/enums/supported-networks.enum";
 import { AssetEntity } from "./asset.entity";
 
 export enum NetworkType {
