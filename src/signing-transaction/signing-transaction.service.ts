@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { SignTransactionDto } from './dtos/sign-transaction.dto';
 import { KeysManagerService } from '../keys-manager/keys-manager.service';
-import { BlockchainFactory } from 'src/blockchain/blockchain.factory';
 import { CustodySignedTransaction } from 'src/utils/types/custom-signed-transaction.type';
+import { BlockchainFactoriesService } from 'src/blockchain/blockchain-strategies.service';
 
 @Injectable()
 export class SigningTransactionService {
 
     constructor(
-        private readonly keyManagerService: KeysManagerService
+        private readonly blockchainFactoriesService : BlockchainFactoriesService,
     ) {}
 
 
@@ -18,12 +18,9 @@ export class SigningTransactionService {
      {
         const { asset, network, keyId, secondHalf, to, amount } = dto;
 
-        const blockchainFactory = new BlockchainFactory(asset, network);
-        await blockchainFactory.init();
+        const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset, network);
 
-        const privateKey = await this.keyManagerService.getFullPrivateKey(keyId, secondHalf);
-
-        return await blockchainFactory.getSignedTransaction(privateKey, to, amount);
+        return await blockchainFactory.getSignedTransaction(dto);
     }
 
 
