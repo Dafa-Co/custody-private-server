@@ -7,11 +7,11 @@ import { NetworkEntity } from 'src/common/entities/network.entity';
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from 'src/blockchain/interfaces/blockchain.interface';
 import { CustodySignedTransaction, SignedTransaction } from 'src/utils/types/custom-signed-transaction.type';
 import { secretsTypes, throwOrReturn } from 'account-abstraction.secret';
-import { getChainFromNetwork } from 'utils/enums/supported-networks.enum';
 import { forwardRef, Inject, InternalServerErrorException } from '@nestjs/common';
 import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { SignTransactionDto } from 'src/signing-transaction/dtos/sign-transaction.dto';
 import { NonceManagerService } from 'src/keys-manager/nonce-manager.service';
+import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 const abi = require('erc-20-abi');
 
 @TransientService()
@@ -136,9 +136,6 @@ export class AccountAbstractionStrategyService implements IBlockChainPrivateServ
         // get account nonce
         const pknonce = await smartAccount.getNonce();
 
-        console.log("pknonce", pknonce)
-
-
 
         // Create a transaction object
         const transaction = await smartAccount.buildUserOp(
@@ -169,7 +166,6 @@ export class AccountAbstractionStrategyService implements IBlockChainPrivateServ
           this.nonceManager.getNonce(keyId, network.networkId)
         ])
 
-        console.log("Nonce: ", nonce);
 
         const signedTransaction = this.asset.type === AssetType.COIN ? await this.getSignedTransactionCoin(privateKey, to, amount, nonce) : await this.getSignedTransactionToken(privateKey, to, amount, nonce);
 

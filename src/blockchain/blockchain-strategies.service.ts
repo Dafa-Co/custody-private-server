@@ -1,80 +1,62 @@
-import { InternalServerErrorException } from "@nestjs/common";
-import { ModuleRef } from "@nestjs/core";
-import { IBlockChainPrivateServer } from "src/blockchain/interfaces/blockchain.interface";
-import { AssetEntity } from "src/common/entities/asset.entity";
-import { NetworkEntity } from "src/common/entities/network.entity";
-import { TransientService } from "utils/decorators/transient.decorator";
-import { gaslessLibrary, netowkrsTypes, getChainFromNetwork, withGasLibrary } from "utils/enums/supported-networks.enum";
-import { BitcoinStrategyService } from "./different-networks/bitcoin-strategy.service";
-import { AccountAbstractionStrategyService } from "./different-networks/account-abstraction-strategy.service";
+import { InternalServerErrorException } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
+import { IBlockChainPrivateServer } from 'src/blockchain/interfaces/blockchain.interface';
+import { AssetEntity } from 'src/common/entities/asset.entity';
+import {
+  NetworkCategory,
+  NetworkEntity,
+} from 'src/common/entities/network.entity';
+import { TransientService } from 'utils/decorators/transient.decorator';
+import { BitcoinStrategyService } from './different-networks/bitcoin-strategy.service';
+import { AccountAbstractionStrategyService } from './different-networks/account-abstraction-strategy.service';
+import {
+  getChainFromNetwork,
+  netowkrsTypes,
+} from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 
 @TransientService()
 export class BlockchainFactoriesService {
-    private asset: AssetEntity;
-    private network: NetworkEntity;
-    private strategy: IBlockChainPrivateServer;
+  private asset: AssetEntity;
+  private network: NetworkEntity;
+  private strategy: IBlockChainPrivateServer;
 
+  constructor(
+    private readonly moduleRef: ModuleRef,
+    private readonly bitcoinStrategyService: BitcoinStrategyService,
+    private readonly accountAbstractionStrategyService: AccountAbstractionStrategyService,
+  ) {}
 
-    constructor(
-        private readonly moduleRef: ModuleRef,
-        private readonly bitcoinStrategyService: BitcoinStrategyService,
-        private readonly accountAbstractionStrategyService: AccountAbstractionStrategyService
-    ) {}
+  async getStrategy(
+    asset: AssetEntity,
+    network: NetworkEntity,
+  ): Promise<IBlockChainPrivateServer> {
+    this.asset = asset;
+    this.network = network;
 
-    async getStrategy(asset: AssetEntity, network: NetworkEntity): Promise<IBlockChainPrivateServer> {
-        this.asset = asset;
-        this.network = network;
+    const { networkId } = network;
 
-        const { networkId } = network;
+    const chain = getChainFromNetwork(networkId);
 
+    const { category } = chain;
 
-        console.log("networkId", network);
+    switch (category) {
+      case NetworkCategory.EVM:
+        this.strategy = this.accountAbstractionStrategyService;
 
-        const chain = getChainFromNetwork(networkId);
-
-        console.log("chain", chain)
-
-        const { library, type } = chain;
-
-        switch (type) {
-          case netowkrsTypes.withGas:
-            this.strategy = await this.getWithGasNetworkLibrary(
-              library as unknown as withGasLibrary,
-            );
-          case netowkrsTypes.gasless:
-            this.strategy = await this.getGaslessNetworkLibrary(library as gaslessLibrary);
-        }
-
-
-        if(!this.strategy) {
-          throw new Error("wallet library not exist")
-        }
-
-        await this.strategy.init({
-            asset,
-            network
-        })
-
-        return this.strategy
+      case NetworkCategory.BitCoin:
+      case NetworkCategory.BitcoinTest:
+        this.strategy = this.bitcoinStrategyService;
     }
 
-    private async getWithGasNetworkLibrary(
-        library: withGasLibrary,
-      ): Promise<IBlockChainPrivateServer> {
-        switch (library) {
-          case withGasLibrary.bitcoin:
-            return this.bitcoinStrategyService;
-        }
-      }
+    if (!this.strategy) {
+      throw new Error('wallet library not exist');
+    }
 
-      private async getGaslessNetworkLibrary(
-        library: gaslessLibrary,
-      ): Promise<IBlockChainPrivateServer> {
-        switch (library) {
-          case gaslessLibrary.AccountAbstraction:
-            return this.accountAbstractionStrategyService;
-        }
-      }
+    await this.strategy.init({
+      asset,
+      network,
+    });
 
-
+    return this.strategy;
+  }
 }

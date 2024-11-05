@@ -33,7 +33,6 @@ export class KeysManagerService {
     dto: generateKeyPair
   ): Promise<IGenerateKeyPairResponse> {
     const { asset, network, shouldSaveFullPrivateKey  } = dto;
-    console.log("waerererrere")
     const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset, network);
     const wallet = await blockchainFactory.createWallet();
     const { address, privateKey } = wallet;

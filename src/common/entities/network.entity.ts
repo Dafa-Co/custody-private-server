@@ -1,4 +1,4 @@
-import { supportedNetworks } from "utils/enums/supported-networks.enum";
+import { supportedNetworks } from "rox-custody_common-modules/blockchain/global-commons/supported-networks.enum";
 import { AssetEntity } from "./asset.entity";
 
 export enum NetworkType {
