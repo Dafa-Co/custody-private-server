@@ -24,7 +24,7 @@ export interface ITransferTransactionEnum {
     }
 }
 
-export type factoryInitParameter = string | null;
+export type factoryInitParameter = string[] | null;
 
 export interface IBlockChainPrivateServer {
   init(object: factoryInitParameter): Promise<void>;

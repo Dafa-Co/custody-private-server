@@ -83,6 +83,7 @@ export class KeysManagerService {
   }
 
   decryptData(encryptedData: string): string {
+    if(!encryptedData) return '';
     const buffer = Buffer.from(encryptedData, 'base64');
     const decrypted = privateDecrypt(
       {

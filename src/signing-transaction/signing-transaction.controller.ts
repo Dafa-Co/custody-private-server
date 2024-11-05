@@ -6,16 +6,10 @@ import { SignTransactionDto } from './dtos/sign-transaction.dto';
 
 @Controller('signing-transaction')
 export class SigningTransactionController {
+  constructor(private readonly signingService: SigningTransactionService) {}
 
-
-
-    constructor(private readonly signingService: SigningTransactionService) {}
-
-    @MessagePattern({ cmd: _MessagePatterns.signTransaction })
-    async generateKey(@Payload() dto: SignTransactionDto) {
-      return this.signingService.signTransaction(dto);
-    }
-
-
-
+  @MessagePattern({ cmd: _MessagePatterns.signTransaction })
+  async generateKey(@Payload() dto: SignTransactionDto) {
+    return this.signingService.signTransaction(dto);
+  }
 }

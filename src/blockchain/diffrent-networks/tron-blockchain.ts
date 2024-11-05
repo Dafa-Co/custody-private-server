@@ -31,6 +31,8 @@ export class TronBlockchain implements IBlockChainPrivateServer {
   private asset: AssetEntity;
   private network: NetworkEntity;
   private chain: Chain;
+  private gasStationPk: string;
+
 
   constructor(asset: AssetEntity, network: NetworkEntity) {
     this.network = network;
@@ -53,10 +55,12 @@ export class TronBlockchain implements IBlockChainPrivateServer {
   }
 
   async init(privateKey: factoryInitParameter): Promise<void> {
-    this.tronWeb = privateKey === 'string'
+    let walletPk: string = privateKey[0];
+    this.gasStationPk = privateKey[1] ?? null;
+    this.tronWeb = privateKey.length > 0
     ? new TronWeb.TronWeb({
       fullHost: this.host,
-      privateKey
+      privateKey: walletPk
     })
     : new TronWeb.TronWeb({
       fullHost: this.host
@@ -77,10 +81,14 @@ export class TronBlockchain implements IBlockChainPrivateServer {
     amount: number,
   ): Promise<CustodySignedTransaction> {
     const signedTransaction = this.asset.type === AssetType.COIN ? await this.getSignedTransactionCoin(privateKey, to, amount) : await this.getSignedTransactionToken(privateKey, to, amount);
+    let signedGasStation
+    if(privateKey != this.gasStationPk) {
+       signedGasStation =  await this.signWithGasStation(signedTransaction);
+    }
 
     return {
-      bundlerUrl: this['bundlerUrl'],
-      signedTransaction
+      bundlerUrl: "this['bundlerUrl']",
+      signedTransaction: signedGasStation ? signedGasStation : signedTransaction
     }
   }
 
@@ -92,6 +100,10 @@ export class TronBlockchain implements IBlockChainPrivateServer {
     );
     const signedTransaction = await this.tronWeb.trx.sign(transaction, privateKey);
     return signedTransaction;
+  }
+
+  async signWithGasStation(transaction: any) {
+    return await this.tronWeb.trx.sign(transaction);
   }
 
   async getSignedTransactionToken(privateKey: string, to: string, amount: number) {}

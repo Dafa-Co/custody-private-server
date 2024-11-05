@@ -22,8 +22,8 @@ import { BitCoinFactory } from './diffrent-networks/bitcoin';
 import { TronBlockchain } from './diffrent-networks/tron-blockchain';
 
 export class BlockchainFactory {
-  private asset: AssetEntity;
-  private network: NetworkEntity;
+  private readonly asset: AssetEntity;
+  private readonly network: NetworkEntity;
   private factory: IBlockChainPrivateServer;
 
   constructor(asset: AssetEntity, network: NetworkEntity) {

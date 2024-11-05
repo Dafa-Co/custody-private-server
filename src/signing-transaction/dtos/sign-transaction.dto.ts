@@ -10,4 +10,5 @@ export class SignTransactionDto {
     network: NetworkEntity;
     keyId: number;
     secondHalf: string;
+    gasStationWalletKeyId: number;
 }
