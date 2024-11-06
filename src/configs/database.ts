@@ -5,7 +5,7 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 
 export const ormConfigs: DataSourceOptions = {
   type: 'mysql',
-  logging: configs.NODE_ENV === 'DEVELOPMENT' ? true : false,
+  logging: true,
   synchronize: false,
   supportBigNumbers: true,
   host: configs.DATABASE_HOST,
