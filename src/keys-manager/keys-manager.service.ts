@@ -1,15 +1,13 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PrivateKeys } from './entities/private-key.entity';
 import { Repository } from 'typeorm';
-import { AssetEntity } from '../common/entities/asset.entity';
-import { NetworkEntity } from '../common/entities/network.entity';
 import { IGenerateKeyPairResponse } from '../utils/interfaces/generate-ket-pair.interface';
 import { privateDecrypt, publicEncrypt } from 'crypto';
-import { BlockchainFactory } from '../blockchain/blockchain.factory';
 import { join } from 'path';
 import * as fs from 'fs';
 import { generateKeyPair } from './interfaces/generate-key.interface';
+import { BlockchainFactoriesService } from 'src/blockchain/blockchain-strategies.service';
 
 
 @Injectable()
@@ -20,6 +18,7 @@ export class KeysManagerService {
   constructor(
     @InjectRepository(PrivateKeys)
     private privateKeyRepository: Repository<PrivateKeys>,
+    private readonly blockchainFactoriesService : BlockchainFactoriesService,
   ) {
     this.loadKeys();
   }
@@ -34,8 +33,7 @@ export class KeysManagerService {
     dto: generateKeyPair
   ): Promise<IGenerateKeyPairResponse> {
     const { asset, network, shouldSaveFullPrivateKey  } = dto;
-    const blockchainFactory = new BlockchainFactory(asset, network);
-    await blockchainFactory.init();
+    const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset, network);
     const wallet = await blockchainFactory.createWallet();
     const { address, privateKey } = wallet;
 
@@ -50,6 +48,10 @@ export class KeysManagerService {
         private_key: shouldSaveFullPrivateKey ? privateKey : firstHalf,
       }),
     );
+
+
+
+
 
     return {
       address,
@@ -83,6 +85,12 @@ export class KeysManagerService {
   }
 
   decryptData(encryptedData: string): string {
+
+    // if the string empty return empty string
+    if (!encryptedData) {
+      return '';
+    }
+
     const buffer = Buffer.from(encryptedData, 'base64');
     const decrypted = privateDecrypt(
       {
