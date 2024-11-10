@@ -6,7 +6,7 @@ import {
   ValidateTransactionEnum,
 } from '../interfaces/blockchain.interface';
 
-import * as TronWeb from 'tronweb';
+import { TronWeb } from 'tronweb';
 import * as bip39 from 'bip39'; // For mnemonic generation
 import * as hdkey from 'hdkey'; // For key derivation
 import { Chain } from 'viem';
@@ -26,7 +26,7 @@ const tronShastaTestnet = 'https://api.shasta.trongrid.io';
 const tronNileTestnet = 'https://nile.trongrid.io';
 
 export class TronBlockchain implements IBlockChainPrivateServer {
-  private tronWeb: any;
+  private tronWeb: TronWeb;
   private host: string;
   private asset: AssetEntity;
   private network: NetworkEntity;
@@ -55,15 +55,9 @@ export class TronBlockchain implements IBlockChainPrivateServer {
   }
 
   async init(privateKey: factoryInitParameter): Promise<void> {
-    const walletPk: string = privateKey ? privateKey[0] : null;
-    this.gasStationPk = privateKey ? privateKey[1] : null;
-    this.tronWeb = privateKey?.length > 0
-    ? new TronWeb.TronWeb({
+    this.tronWeb = new TronWeb({
       fullHost: this.host,
-      privateKey: walletPk
-    })
-    : new TronWeb.TronWeb({
-      fullHost: this.host
+      privateKey: privateKey
     })
     return;
   }
@@ -85,7 +79,7 @@ export class TronBlockchain implements IBlockChainPrivateServer {
     : await this.getSignedTransactionToken(privateKey, to, amount);
 
     return {
-      bundlerUrl: "this['bundlerUrl']",
+      bundlerUrl: this.host,
       signedTransaction: signedTransaction
     }
   }
@@ -93,27 +87,19 @@ export class TronBlockchain implements IBlockChainPrivateServer {
   async getSignedTransactionCoin(privateKey: string, to: string, amount: number) {
     const transaction = await this.tronWeb.transactionBuilder.sendTrx(
       to,
-      this.tronWeb.toSun(amount),
-      this.tronWeb.defaultAddress.base58,
+      amount * 10 ** this.asset.decimals
     );
-    const signedTransaction = await this.tronWeb.trx.sign(transaction, privateKey);
-    return signedTransaction;
-  }
 
-  async signWithGasStation(transaction: any) {
-    return await this.tronWeb.trx.sign(transaction);
+    return await this.tronWeb.trx.sign(transaction, privateKey);
   }
 
   async getSignedTransactionToken(privateKey: string, to: string, amount: number) {
-    const signedTransaction = await this.tronWeb.transactionBuilder.sendToken(
+    const transaction = await this.tronWeb.transactionBuilder.sendToken(
       to,
-      this.tronWeb.toSun(amount),
+      amount * 10 ** this.asset.decimals,
       this.asset.contract_address,
-      {
-        privateKey
-      }
     );
-    return signedTransaction;
+    return await this.tronWeb.trx.sign(transaction, privateKey);
   }
 }
 

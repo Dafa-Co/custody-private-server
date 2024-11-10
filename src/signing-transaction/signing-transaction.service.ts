@@ -18,19 +18,10 @@ export class SigningTransactionService {
     ): Promise<CustodySignedTransaction>
      {
         const { asset, network, keyId, secondHalf, to, amount, gasStationWalletKeyId } = dto;
-
-        if (gasStationWalletKeyId && gasStationWalletKeyId !== keyId) {
-          const blockchainFactory = new BlockchainFactory(asset, network);
-          const gasStationPrivateKey = await this.keyManagerService.getFullPrivateKey(gasStationWalletKeyId, secondHalf);
           const privateKey = await this.keyManagerService.getFullPrivateKey(keyId, secondHalf);
-          await blockchainFactory.init([privateKey, gasStationPrivateKey]);
+          const blockchainFactory = new BlockchainFactory(asset, network);
+          await blockchainFactory.init(privateKey);
           const signedTrx = await blockchainFactory.getSignedTransaction(privateKey, to, amount);
           return signedTrx
-        } else {
-          const privateKey = await this.keyManagerService.getFullPrivateKey(keyId, secondHalf);
-          const blockchainFactory = new BlockchainFactory(asset, network);
-          await blockchainFactory.init([privateKey]);
-          return await blockchainFactory.getSignedTransaction(privateKey, to, amount)
-        }
     }
 }
