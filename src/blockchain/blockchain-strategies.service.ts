@@ -42,10 +42,12 @@ export class BlockchainFactoriesService {
     switch (category) {
       case NetworkCategory.EVM:
         this.strategy = this.accountAbstractionStrategyService;
+        break;
 
       case NetworkCategory.BitCoin:
       case NetworkCategory.BitcoinTest:
         this.strategy = this.bitcoinStrategyService;
+        break;
     }
 
     if (!this.strategy) {
