@@ -1,5 +1,8 @@
+import { AssetEntity } from "src/common/entities/asset.entity";
 import { TransactionStatus } from "../../utils/enums/transaction.enum";
 import { CustodySignedTransaction, SignedTransaction } from "../../utils/types/custom-signed-transaction.type";
+import { NetworkEntity } from "src/common/entities/network.entity";
+import { SignTransactionDto } from "src/signing-transaction/dtos/sign-transaction.dto";
 
 export interface IWalletKeys {
     privateKey: string;
@@ -24,13 +27,17 @@ export interface ITransferTransactionEnum {
     }
 }
 
+
+export interface InitBlockChainPrivateServerStrategies {
+  asset: AssetEntity;
+  network: NetworkEntity;
+}
+
 export interface IBlockChainPrivateServer {
-  init(): Promise<void>;
+  init(initData: InitBlockChainPrivateServerStrategies): Promise<void>;
   createWallet(): Promise<IWalletKeys>;
   getSignedTransaction(
-    privateKey: string,
-    to: string,
-    amount: number,
+    dto: SignTransactionDto
   ): Promise<CustodySignedTransaction>;
 }
 

@@ -1,7 +1,7 @@
 import { join } from 'path';
-import { supportedNetworks } from 'utils/enums/supported-networks.enum';
 import * as fs from 'fs';
 import { InternalServerErrorException } from '@nestjs/common';
+import { supportedNetworks } from 'rox-custody_common-modules/blockchain/global-commons/supported-networks.enum';
 
 const keysPath = join(process.cwd(), 'src/../', 'account-secrets.json'); // Adjust the path as needed
 const keysData = JSON.parse(fs.readFileSync(keysPath, 'utf8'));
