@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { PrivateKeyNonce } from 'src/keys-manager/entities/nonce.entity';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class PrivateKeys {
@@ -7,4 +8,7 @@ export class PrivateKeys {
 
   @Column()
   private_key: string;
+
+  @OneToMany(() => PrivateKeyNonce, (usage) => usage.privateKey)
+  usageRecords: PrivateKeyNonce[];
 }

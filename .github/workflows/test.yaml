@@ -20,7 +20,11 @@ jobs:
         chmod 600 private_key
          ssh -i private_key  -o StrictHostKeyChecking=no  $USER@$HOST  "
            cd /root/test/custody-private-server
+           git pull --recurse-submodules
+           cd rox-custody_common-modules
+           git checkout test
            git pull
+           cd ..
            docker build -t $container_name .
            docker rm -f $container_name
-           docker run -d -p 127.0.0.1:4020:3000 --name=$container_name --restart=unless-stopped  $container_name "
+           docker run -d -p 4020:3000 --name=$container_name --restart=unless-stopped  $container_name "

@@ -1,25 +1,25 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PrivateKeys } from './entities/private-key.entity';
 import { Repository } from 'typeorm';
-import { AssetEntity } from '../common/entities/asset.entity';
-import { NetworkEntity } from '../common/entities/network.entity';
 import { IGenerateKeyPairResponse } from '../utils/interfaces/generate-ket-pair.interface';
 import { privateDecrypt, publicEncrypt } from 'crypto';
-import { BlockchainFactory } from '../blockchain/blockchain.factory';
 import { join } from 'path';
 import * as fs from 'fs';
 import { generateKeyPair } from './interfaces/generate-key.interface';
-
+import { BlockchainFactoriesService } from 'src/blockchain/blockchain-strategies.service';
 
 @Injectable()
 export class KeysManagerService {
   private keys: { publicKey: string; privateKey: string; passphrase: string };
 
-
   constructor(
     @InjectRepository(PrivateKeys)
     private privateKeyRepository: Repository<PrivateKeys>,
+    private readonly blockchainFactoriesService: BlockchainFactoriesService,
   ) {
     this.loadKeys();
   }
@@ -31,11 +31,13 @@ export class KeysManagerService {
   }
 
   async generateKeyPair(
-    dto: generateKeyPair
+    dto: generateKeyPair,
   ): Promise<IGenerateKeyPairResponse> {
-    const { asset, network, shouldSaveFullPrivateKey  } = dto;
-    const blockchainFactory = new BlockchainFactory(asset, network);
-    await blockchainFactory.init(null);
+    const { asset, network, shouldSaveFullPrivateKey } = dto;
+    const blockchainFactory = await this.blockchainFactoriesService.getStrategy(
+      asset,
+      network,
+    );
     const wallet = await blockchainFactory.createWallet();
     const { address, privateKey } = wallet;
 
@@ -76,23 +78,26 @@ export class KeysManagerService {
   }
 
   encryptData(data: string): string {
-    const publicKey = this.keys.publicKey
+    const publicKey = this.keys.publicKey;
     const buffer = Buffer.from(data, 'utf8');
     const encrypted = publicEncrypt(publicKey, buffer);
     return encrypted.toString('base64');
   }
 
   decryptData(encryptedData: string): string {
-    if(!encryptedData) return '';
+    // if the string empty return empty string
+    if (!encryptedData) {
+      return '';
+    }
+
     const buffer = Buffer.from(encryptedData, 'base64');
     const decrypted = privateDecrypt(
       {
         key: this.keys.privateKey,
         passphrase: this.keys.passphrase, // Use the passphrase from JSON
       },
-      buffer
+      buffer,
     );
     return decrypted.toString('utf8');
   }
-
 }

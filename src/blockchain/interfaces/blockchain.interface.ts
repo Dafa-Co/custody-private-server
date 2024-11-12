@@ -1,11 +1,13 @@
+import { AssetEntity } from "src/common/entities/asset.entity";
 import { TransactionStatus } from "../../utils/enums/transaction.enum";
 import { CustodySignedTransaction, SignedTransaction } from "../../utils/types/custom-signed-transaction.type";
+import { NetworkEntity } from "src/common/entities/network.entity";
+import { SignTransactionDto } from "src/signing-transaction/dtos/sign-transaction.dto";
 
 export interface IWalletKeys {
     privateKey: string;
     address: string;
 }
-
 
 export enum ValidateTransactionEnum {
  valid = 1,
@@ -13,7 +15,6 @@ export enum ValidateTransactionEnum {
  insufficientBalance = 3,
  blockChainError = 4,
 }
-
 
 export interface ITransferTransactionEnum {
     status: TransactionStatus;
@@ -24,15 +25,17 @@ export interface ITransferTransactionEnum {
     }
 }
 
-export type factoryInitParameter = string | null;
+export interface InitBlockChainPrivateServerStrategies {
+  asset: AssetEntity;
+  network: NetworkEntity;
+  privateKey?: string;
+}
 
 export interface IBlockChainPrivateServer {
-  init(object: factoryInitParameter): Promise<void>;
+  init(initData: InitBlockChainPrivateServerStrategies): Promise<void>;
   createWallet(): Promise<IWalletKeys>;
   getSignedTransaction(
-    privateKey: string,
-    to: string,
-    amount: number,
+    dto: SignTransactionDto
   ): Promise<CustodySignedTransaction>;
 }
 

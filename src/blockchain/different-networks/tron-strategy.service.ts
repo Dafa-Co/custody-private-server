@@ -1,31 +1,28 @@
 import {
-  factoryInitParameter,
   IBlockChainPrivateServer,
-  ITransferTransactionEnum,
+  InitBlockChainPrivateServerStrategies,
   IWalletKeys,
-  ValidateTransactionEnum,
 } from '../interfaces/blockchain.interface';
 
 import { TronWeb } from 'tronweb';
-import * as bip39 from 'bip39'; // For mnemonic generation
-import * as hdkey from 'hdkey'; // For key derivation
 import { Chain } from 'viem';
-import { getChainFromNetwork, supportedNetworks } from '../../utils/enums/supported-networks.enum';
 import { CustodySignedTransaction } from 'src/utils/types/custom-signed-transaction.type';
 import { AssetEntity, AssetType } from 'src/common/entities/asset.entity';
 import { NetworkEntity } from 'src/common/entities/network.entity';
-
-const tronApiKey = '6f398b6c-d47d-4d65-b846-cf83a73cf6a6';
-const pk = '1b8d29eb428a44261236f1b45ecdd185edee61a4670cd52f5d627f458f6e133a';
-export const headers = {
-  TRON_PRO_API_KEY: tronApiKey,
-};
+import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
+import { supportedNetworks } from 'rox-custody_common-modules/blockchain/global-commons/supported-networks.enum';
+import { TransientService } from 'utils/decorators/transient.decorator';
+import { forwardRef, Inject } from '@nestjs/common';
+import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
+import { NonceManagerService } from 'src/keys-manager/nonce-manager.service';
+import { SignTransactionDto } from 'src/signing-transaction/dtos/sign-transaction.dto';
 
 const tronMainnet = 'https://api.trongrid.io';
 const tronShastaTestnet = 'https://api.shasta.trongrid.io';
 const tronNileTestnet = 'https://nile.trongrid.io';
 
-export class TronBlockchain implements IBlockChainPrivateServer {
+@TransientService()
+export class TronStrategyService implements IBlockChainPrivateServer {
   private tronWeb: TronWeb;
   private host: string;
   private asset: AssetEntity;
@@ -33,14 +30,20 @@ export class TronBlockchain implements IBlockChainPrivateServer {
   private chain: Chain;
   private gasStationPk: string;
 
+  constructor(
+    @Inject(forwardRef(() => KeysManagerService))
+    private readonly keyManagerService: KeysManagerService,
+    private readonly nonceManager: NonceManagerService,
+  ) {}
 
-  constructor(asset: AssetEntity, network: NetworkEntity) {
+  async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
+    const { asset, network, privateKey } = initData;
     this.network = network;
     this.asset = asset;
     const networkObject = getChainFromNetwork(network.networkId);
 
     this.chain = networkObject.chain;
-    
+
     switch (network.networkId) {
       case supportedNetworks.tron:
         this.host = tronMainnet;
@@ -52,13 +55,11 @@ export class TronBlockchain implements IBlockChainPrivateServer {
         this.host = tronNileTestnet;
         break;
     }
-  }
 
-  async init(privateKey: factoryInitParameter): Promise<void> {
     this.tronWeb = new TronWeb({
       fullHost: this.host,
-      privateKey: privateKey
-    })
+      privateKey: privateKey,
+    });
     return;
   }
 
@@ -70,30 +71,41 @@ export class TronBlockchain implements IBlockChainPrivateServer {
   }
 
   async getSignedTransaction(
-    privateKey: string,
-    to: string,
-    amount: number,
+    dto: SignTransactionDto
   ): Promise<CustodySignedTransaction> {
-    const signedTransaction = this.asset.type === AssetType.COIN 
-    ? await this.getSignedTransactionCoin(privateKey, to, amount) 
-    : await this.getSignedTransactionToken(privateKey, to, amount);
+    const { amount, asset, keyId, network, secondHalf, to } = dto;
+
+    const privateKey = await this.keyManagerService.getFullPrivateKey(keyId, secondHalf)
+
+    const signedTransaction =
+      this.asset.type === AssetType.COIN
+        ? await this.getSignedTransactionCoin(privateKey, to, amount)
+        : await this.getSignedTransactionToken(privateKey, to, amount);
 
     return {
       bundlerUrl: this.host,
-      signedTransaction: signedTransaction
-    }
+      signedTransaction: signedTransaction,
+    };
   }
 
-  async getSignedTransactionCoin(privateKey: string, to: string, amount: number) {
+  async getSignedTransactionCoin(
+    privateKey: string,
+    to: string,
+    amount: number,
+  ) {
     const transaction = await this.tronWeb.transactionBuilder.sendTrx(
       to,
-      amount * 10 ** this.asset.decimals
+      amount * 10 ** this.asset.decimals,
     );
 
     return await this.tronWeb.trx.sign(transaction, privateKey);
   }
 
-  async getSignedTransactionToken(privateKey: string, to: string, amount: number) {
+  async getSignedTransactionToken(
+    privateKey: string,
+    to: string,
+    amount: number,
+  ) {
     const transaction = await this.tronWeb.transactionBuilder.sendToken(
       to,
       amount * 10 ** this.asset.decimals,
@@ -162,4 +174,3 @@ async getBalance(address: string): Promise<number> {
 
 
 */
-
