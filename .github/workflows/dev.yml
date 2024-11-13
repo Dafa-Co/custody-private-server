@@ -21,6 +21,10 @@ jobs:
          ssh -i private_key   -o StrictHostKeyChecking=no  $USER@$HOST  " 
            cd /root/dev/custody-private-server
            git pull 
+           cd rox-custody_common-modules
+           git checkout test
+           git pull
+           cd ..
            docker build -t $container_name . 
            docker stop $container_name  && docker rm $container_name
            docker run -d -p 4031:3000 --name=$container_name  --restart=unless-stopped  $container_name "
