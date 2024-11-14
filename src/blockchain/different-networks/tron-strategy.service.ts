@@ -71,11 +71,14 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   }
 
   async getSignedTransaction(
-    dto: SignTransactionDto
+    dto: SignTransactionDto,
   ): Promise<CustodySignedTransaction> {
     const { amount, asset, keyId, network, secondHalf, to } = dto;
 
-    const privateKey = await this.keyManagerService.getFullPrivateKey(keyId, secondHalf)
+    const privateKey = await this.keyManagerService.getFullPrivateKey(
+      keyId,
+      secondHalf,
+    );
 
     const signedTransaction =
       this.asset.type === AssetType.COIN
@@ -106,12 +109,23 @@ export class TronStrategyService implements IBlockChainPrivateServer {
     to: string,
     amount: number,
   ) {
-    const transaction = await this.tronWeb.transactionBuilder.sendToken(
-      to,
-      amount * 10 ** this.asset.decimals,
-      this.asset.contract_address,
-    );
-    return await this.tronWeb.trx.sign(transaction, privateKey);
+    const transferOptions = {
+      feeLimit: 10_000_000,
+    };
+    const contractMethod = 'transfer(address,uint256)';
+    const contractMethodParams = [
+      { type: 'address', value: to },
+      { type: 'uint256', value: amount * 10 ** this.asset.decimals },
+    ];
+    const transaction =
+      await this.tronWeb.transactionBuilder.triggerSmartContract(
+        this.asset.contract_address,
+        contractMethod,
+        transferOptions,
+        contractMethodParams
+      );
+
+    return await this.tronWeb.trx.sign(transaction.transaction, privateKey);
   }
 }
 
