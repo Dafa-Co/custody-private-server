@@ -5,8 +5,8 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import configs from '../utils/configs/configs';
 import { join } from 'path';
 import { PrivateKeys } from './entities/private-key.entity';
-import { AssetEntity, AssetStatus, AssetType } from '../common/entities/asset.entity';
-import { NetworkEntity, NetworkStatus, NetworkType } from '../common/entities/network.entity';
+import { AssetEntity, AssetStatus, AssetType } from '../../rox-custody_common-modules/libs/entities/asset.entity';
+import { NetworkEntity, NetworkStatus, NetworkType } from '../../rox-custody_common-modules/libs/entities/network.entity';
 
 describe('KeysManagerService', () => {
   let service: KeysManagerService;

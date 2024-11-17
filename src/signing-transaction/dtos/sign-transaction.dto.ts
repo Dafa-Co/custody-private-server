@@ -1,5 +1,5 @@
-import { AssetEntity } from "src/common/entities/asset.entity";
-import { NetworkEntity } from "src/common/entities/network.entity";
+import { AssetEntity } from "rox-custody_common-modules/libs/entities/asset.entity";
+import { NetworkEntity } from "rox-custody_common-modules/libs/entities/network.entity";
 
 
 

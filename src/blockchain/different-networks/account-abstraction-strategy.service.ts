@@ -7,8 +7,8 @@ import {
   Transaction,
 } from '@biconomy/account';
 import { TransientService } from 'utils/decorators/transient.decorator';
-import { AssetEntity, AssetType } from 'src/common/entities/asset.entity';
-import { NetworkEntity } from 'src/common/entities/network.entity';
+import { AssetEntity, AssetType } from 'rox-custody_common-modules/libs/entities/asset.entity';
+import { NetworkEntity } from 'rox-custody_common-modules/libs/entities/network.entity';
 import {
   IBlockChainPrivateServer,
   InitBlockChainPrivateServerStrategies,
@@ -152,7 +152,7 @@ export class AccountAbstractionStrategyService
 
     const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
 
-    const valueSmallUnit = BigInt(amount * 10 ** this.asset.decimals);
+    const valueSmallUnit = BigInt(Math.floor(amount * 10 ** this.asset.decimals));
 
     let data: string | null = null;
     if (this.asset.type === AssetType.TOKEN) {

@@ -1,6 +1,6 @@
 import { TransientService } from 'utils/decorators/transient.decorator';
-import { NetworkEntity } from 'src/common/entities/network.entity';
-import { AssetEntity } from 'src/common/entities/asset.entity';
+import { NetworkEntity } from 'rox-custody_common-modules/libs/entities/network.entity';
+import { AssetEntity } from 'rox-custody_common-modules/libs/entities/asset.entity';
 import { BitcoinTransaction, CustodySignedTransaction } from 'src/utils/types/custom-signed-transaction.type';
 import { networks, payments, Psbt, Signer } from 'bitcoinjs-lib';
 import { ECPairAPI, ECPairFactory, ECPairInterface } from "ecpair";
