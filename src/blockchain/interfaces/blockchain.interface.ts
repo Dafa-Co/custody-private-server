@@ -1,7 +1,7 @@
-import { AssetEntity } from "rox-custody_common-modules/libs/entities/asset.entity";
+import { CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
 import { TransactionStatus } from "../../utils/enums/transaction.enum";
 import { CustodySignedTransaction, SignedTransaction } from "../../utils/types/custom-signed-transaction.type";
-import { NetworkEntity } from "rox-custody_common-modules/libs/entities/network.entity";
+import { CommonNetwork } from "rox-custody_common-modules/libs/entities/network.entity";
 import { SignTransactionDto } from "src/signing-transaction/dtos/sign-transaction.dto";
 
 export interface IWalletKeys {
@@ -29,8 +29,8 @@ export interface ITransferTransactionEnum {
 
 
 export interface InitBlockChainPrivateServerStrategies {
-  asset: AssetEntity;
-  network: NetworkEntity;
+  asset: CommonAsset;
+  network: CommonNetwork;
 }
 
 export interface IBlockChainPrivateServer {

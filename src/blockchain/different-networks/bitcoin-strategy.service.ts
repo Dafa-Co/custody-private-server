@@ -1,6 +1,6 @@
 import { TransientService } from 'utils/decorators/transient.decorator';
-import { NetworkEntity } from 'rox-custody_common-modules/libs/entities/network.entity';
-import { AssetEntity } from 'rox-custody_common-modules/libs/entities/asset.entity';
+import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.entity';
+import { CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
 import { BitcoinTransaction, CustodySignedTransaction } from 'src/utils/types/custom-signed-transaction.type';
 import { networks, payments, Psbt, Signer } from 'bitcoinjs-lib';
 import { ECPairAPI, ECPairFactory, ECPairInterface } from "ecpair";
@@ -16,8 +16,8 @@ import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/globa
 
 @TransientService()
 export class BitcoinStrategyService implements IBlockChainPrivateServer {
-    private asset: AssetEntity;
-    private network: NetworkEntity;
+    private asset: CommonAsset;
+    private network: CommonNetwork;
     private NetworkString: string;
     private bitcoinNetwork: networks.Network;
     private ECPair: ECPairAPI;

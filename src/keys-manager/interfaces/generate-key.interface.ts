@@ -1,10 +1,10 @@
-import { AssetEntity } from "rox-custody_common-modules/libs/entities/asset.entity";
-import { NetworkEntity } from "rox-custody_common-modules/libs/entities/network.entity";
+import { CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
+import { CommonNetwork } from "rox-custody_common-modules/libs/entities/network.entity";
 
 
 
 export abstract class generateKeyPair {
-    asset: AssetEntity;
-    network: NetworkEntity;
+    asset: CommonAsset;
+    network: CommonNetwork;
     shouldSaveFullPrivateKey: boolean = false;
 }

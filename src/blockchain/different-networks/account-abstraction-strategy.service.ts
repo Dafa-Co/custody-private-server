@@ -7,8 +7,8 @@ import {
   Transaction,
 } from '@biconomy/account';
 import { TransientService } from 'utils/decorators/transient.decorator';
-import { AssetEntity, AssetType } from 'rox-custody_common-modules/libs/entities/asset.entity';
-import { NetworkEntity } from 'rox-custody_common-modules/libs/entities/network.entity';
+import { CommonAsset, AssetType } from 'rox-custody_common-modules/libs/entities/asset.entity';
+import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.entity';
 import {
   IBlockChainPrivateServer,
   InitBlockChainPrivateServerStrategies,
@@ -34,8 +34,8 @@ const abi = require('erc-20-abi');
 export class AccountAbstractionStrategyService
   implements IBlockChainPrivateServer
 {
-  private asset: AssetEntity;
-  private network: NetworkEntity;
+  private asset: CommonAsset;
+  private network: CommonNetwork;
   private chain: Chain;
   private bundlerUrl: string;
   private paymasterUrl: string;
