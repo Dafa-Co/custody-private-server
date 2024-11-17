@@ -9,7 +9,7 @@ import axios, { AxiosInstance } from 'axios';
 import { UTXO } from 'src/utils/types/utxos';
 import { BadRequestException, forwardRef, Inject } from '@nestjs/common';
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from 'src/blockchain/interfaces/blockchain.interface';
-import { SignTransactionDto } from 'src/signing-transaction/dtos/sign-transaction.dto';
+import { SignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 
@@ -84,9 +84,9 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
         dto: SignTransactionDto,
     ): Promise<CustodySignedTransaction> {
 
-    const { amount: bitcoinAmount, asset, keyId, network, secondHalf, to } = dto;
+    const { amount: bitcoinAmount, asset, keyId, network, secondHalf, to, corporateId } = dto;
 
-    const privateKey = await this.keyManagerService.getFullPrivateKey(keyId, secondHalf);
+    const privateKey = await this.keyManagerService.getFullPrivateKey(keyId, secondHalf, corporateId);
 
       try {
 

@@ -2,7 +2,7 @@ import { CommonAsset } from "rox-custody_common-modules/libs/entities/asset.enti
 import { TransactionStatus } from "../../utils/enums/transaction.enum";
 import { CustodySignedTransaction, SignedTransaction } from "../../utils/types/custom-signed-transaction.type";
 import { CommonNetwork } from "rox-custody_common-modules/libs/entities/network.entity";
-import { SignTransactionDto } from "src/signing-transaction/dtos/sign-transaction.dto";
+import { SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
 
 export interface IWalletKeys {
     privateKey: string;

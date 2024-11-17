@@ -25,7 +25,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
-import { SignTransactionDto } from 'src/signing-transaction/dtos/sign-transaction.dto';
+import { SignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { NonceManagerService } from 'src/keys-manager/nonce-manager.service';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 const abi = require('erc-20-abi');
@@ -143,10 +143,10 @@ export class AccountAbstractionStrategyService
   async getSignedTransaction(
     dto: SignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { amount, asset, keyId, network, secondHalf, to } = dto;
+    const { amount, asset, keyId, network, secondHalf, to, corporateId } = dto;
 
     const [privateKey, nonce] = await Promise.all([
-      this.keyManagerService.getFullPrivateKey(keyId, secondHalf),
+      this.keyManagerService.getFullPrivateKey(keyId, secondHalf, corporateId),
       this.nonceManager.getNonce(keyId, network.networkId),
     ]);
 

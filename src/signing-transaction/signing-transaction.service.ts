@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SignTransactionDto } from './dtos/sign-transaction.dto';
-import { KeysManagerService } from '../keys-manager/keys-manager.service';
+import { SignTransactionDto } from '../../rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { CustodySignedTransaction } from 'src/utils/types/custom-signed-transaction.type';
 import { BlockchainFactoriesService } from 'src/blockchain/blockchain-strategies.service';
 

@@ -2,7 +2,7 @@ import { Controller } from '@nestjs/common';
 import { SigningTransactionService } from './signing-transaction.service';
 import { _MessagePatterns } from 'src/utils/microservice-constants';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { SignTransactionDto } from './dtos/sign-transaction.dto';
+import { SignTransactionDto } from '../../rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 
 @Controller('signing-transaction')
 export class SigningTransactionController {
