@@ -17,7 +17,7 @@ import {
 import {
   CustodySignedTransaction,
   SignedTransaction,
-} from 'src/utils/types/custom-signed-transaction.type';
+} from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { secretsTypes, throwOrReturn } from 'account-abstraction.secret';
 import {
   forwardRef,

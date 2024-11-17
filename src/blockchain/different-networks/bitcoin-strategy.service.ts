@@ -1,7 +1,7 @@
 import { TransientService } from 'utils/decorators/transient.decorator';
 import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.entity';
 import { CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
-import { BitcoinTransaction, CustodySignedTransaction } from 'src/utils/types/custom-signed-transaction.type';
+import { BitcoinTransaction, CustodySignedTransaction } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { networks, payments, Psbt, Signer } from 'bitcoinjs-lib';
 import { ECPairAPI, ECPairFactory, ECPairInterface } from "ecpair";
 import * as ecc from 'tiny-secp256k1';
