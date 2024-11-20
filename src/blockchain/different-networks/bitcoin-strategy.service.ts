@@ -9,7 +9,7 @@ import axios, { AxiosInstance } from 'axios';
 import { UTXO } from 'src/utils/types/utxos';
 import { BadRequestException, forwardRef, Inject } from '@nestjs/common';
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from 'src/blockchain/interfaces/blockchain.interface';
-import { SignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import { PrivateServerSignTransactionDto, SignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 
@@ -81,10 +81,10 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
 
 
     async getSignedTransaction(
-        dto: SignTransactionDto,
+        dto: PrivateServerSignTransactionDto,
     ): Promise<CustodySignedTransaction> {
 
-    const { amount: bitcoinAmount, asset, keyId, network, secondHalf, to, corporateId } = dto;
+    const { amount: bitcoinAmount, asset, keyId, network, secondHalf, to, corporateId, transactionId } = dto;
 
     const privateKey = await this.keyManagerService.getFullPrivateKey(keyId, secondHalf, corporateId);
 
@@ -213,6 +213,8 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
         const signedTx: CustodySignedTransaction = {
           signedTransaction: signedTransaction,
           bundlerUrl: this.api.defaults.baseURL + '/tx',
+          error: null,
+          transactionId
         };
 
         return signedTx;

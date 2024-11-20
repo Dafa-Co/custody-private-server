@@ -39,8 +39,6 @@ export class KeysManagerService {
     const wallet = await blockchainFactory.createWallet();
     const { address, privateKey } = wallet;
 
-    console.log("wallet", wallet)
-
     // split the private key into two parts
     const midpoint = Math.ceil(privateKey.length / 2);
     const firstHalf = privateKey.substring(0, midpoint);

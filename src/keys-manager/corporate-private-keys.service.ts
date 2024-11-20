@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { CorporateKeyEntity } from './entities/corporate-key.entity';
+import { InvalidPartOfPrivateKey } from 'rox-custody_common-modules/libs/custom-errors/invalid-part-of-private-key.exception';
 
 @Injectable()
 export class CorporatePrivateKeysService {
@@ -12,7 +13,10 @@ export class CorporatePrivateKeysService {
   ) {}
 
   // Function to generate key pair
-  private async generateKeyPair(): Promise<{ privateKey: string; publicKey: string }> {
+  private async generateKeyPair(): Promise<{
+    privateKey: string;
+    publicKey: string;
+  }> {
     return new Promise((resolve, reject) => {
       crypto.generateKeyPair(
         'rsa',
@@ -30,8 +34,12 @@ export class CorporatePrivateKeysService {
   }
 
   // Function to ensure keys exist for a corporate ID
-  private async ensureKeysExist(corporateId: number): Promise<CorporateKeyEntity> {
-    let corporate = await this.corporateRepository.findOne({ where: { corporateId } });
+  private async ensureKeysExist(
+    corporateId: number,
+  ): Promise<CorporateKeyEntity> {
+    let corporate = await this.corporateRepository.findOne({
+      where: { corporateId },
+    });
 
     if (!corporate) {
       // Generate key pair
@@ -62,14 +70,21 @@ export class CorporatePrivateKeysService {
   }
 
   // Decrypt data using private key
-  async decryptData(corporateId: number, encryptedData: string): Promise<string> {
-    const corporate = await this.ensureKeysExist(corporateId);
+  async decryptData(
+    corporateId: number,
+    encryptedData: string,
+  ): Promise<string> {
+    try {
+      const corporate = await this.ensureKeysExist(corporateId);
 
-    const decryptedData = crypto.privateDecrypt(
-      corporate.privateKey,
-      Buffer.from(encryptedData, 'base64'),
-    );
+      const decryptedData = crypto.privateDecrypt(
+        corporate.privateKey,
+        Buffer.from(encryptedData, 'base64'),
+      );
 
-    return decryptedData.toString('utf8');
+      return decryptedData.toString('utf8');
+    } catch (error) {
+      throw new InvalidPartOfPrivateKey();
+    }
   }
 }
