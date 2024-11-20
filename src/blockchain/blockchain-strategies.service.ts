@@ -1,11 +1,9 @@
-import { InternalServerErrorException } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { IBlockChainPrivateServer } from 'src/blockchain/interfaces/blockchain.interface';
-import { AssetEntity } from 'src/common/entities/asset.entity';
+import { CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
 import {
-  NetworkCategory,
-  NetworkEntity,
-} from 'src/common/entities/network.entity';
+  CommonNetwork,
+} from 'rox-custody_common-modules/libs/entities/network.entity';
 import { TransientService } from 'utils/decorators/transient.decorator';
 import { BitcoinStrategyService } from './different-networks/bitcoin-strategy.service';
 import { AccountAbstractionStrategyService } from './different-networks/account-abstraction-strategy.service';
@@ -13,11 +11,12 @@ import {
   getChainFromNetwork,
   netowkrsTypes,
 } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
+import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-commons/networks-gategory';
 
 @TransientService()
 export class BlockchainFactoriesService {
-  private asset: AssetEntity;
-  private network: NetworkEntity;
+  private asset: CommonAsset;
+  private network: CommonNetwork;
   private strategy: IBlockChainPrivateServer;
 
   constructor(
@@ -27,8 +26,8 @@ export class BlockchainFactoriesService {
   ) {}
 
   async getStrategy(
-    asset: AssetEntity,
-    network: NetworkEntity,
+    asset: CommonAsset,
+    network: CommonNetwork,
   ): Promise<IBlockChainPrivateServer> {
     this.asset = asset;
     this.network = network;

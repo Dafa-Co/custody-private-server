@@ -1,7 +1,7 @@
 import { TransientService } from 'utils/decorators/transient.decorator';
-import { NetworkEntity } from 'src/common/entities/network.entity';
-import { AssetEntity } from 'src/common/entities/asset.entity';
-import { BitcoinTransaction, CustodySignedTransaction } from 'src/utils/types/custom-signed-transaction.type';
+import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.entity';
+import { CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
+import { BitcoinTransaction, CustodySignedTransaction } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { networks, payments, Psbt, Signer } from 'bitcoinjs-lib';
 import { ECPairAPI, ECPairFactory, ECPairInterface } from "ecpair";
 import * as ecc from 'tiny-secp256k1';
@@ -9,15 +9,15 @@ import axios, { AxiosInstance } from 'axios';
 import { UTXO } from 'src/utils/types/utxos';
 import { BadRequestException, forwardRef, Inject } from '@nestjs/common';
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from 'src/blockchain/interfaces/blockchain.interface';
-import { SignTransactionDto } from 'src/signing-transaction/dtos/sign-transaction.dto';
+import { PrivateServerSignTransactionDto, SignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 
 
 @TransientService()
 export class BitcoinStrategyService implements IBlockChainPrivateServer {
-    private asset: AssetEntity;
-    private network: NetworkEntity;
+    private asset: CommonAsset;
+    private network: CommonNetwork;
     private NetworkString: string;
     private bitcoinNetwork: networks.Network;
     private ECPair: ECPairAPI;
@@ -81,12 +81,12 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
 
 
     async getSignedTransaction(
-        dto: SignTransactionDto,
+        dto: PrivateServerSignTransactionDto,
     ): Promise<CustodySignedTransaction> {
 
-    const { amount: bitcoinAmount, asset, keyId, network, secondHalf, to } = dto;
+    const { amount: bitcoinAmount, asset, keyId, network, secondHalf, to, corporateId, transactionId } = dto;
 
-    const privateKey = await this.keyManagerService.getFullPrivateKey(keyId, secondHalf);
+    const privateKey = await this.keyManagerService.getFullPrivateKey(keyId, secondHalf, corporateId);
 
       try {
 
@@ -213,6 +213,8 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
         const signedTx: CustodySignedTransaction = {
           signedTransaction: signedTransaction,
           bundlerUrl: this.api.defaults.baseURL + '/tx',
+          error: null,
+          transactionId
         };
 
         return signedTx;

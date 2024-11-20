@@ -7,8 +7,8 @@ import {
   Transaction,
 } from '@biconomy/account';
 import { TransientService } from 'utils/decorators/transient.decorator';
-import { AssetEntity, AssetType } from 'src/common/entities/asset.entity';
-import { NetworkEntity } from 'src/common/entities/network.entity';
+import { CommonAsset, AssetType } from 'rox-custody_common-modules/libs/entities/asset.entity';
+import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.entity';
 import {
   IBlockChainPrivateServer,
   InitBlockChainPrivateServerStrategies,
@@ -17,7 +17,7 @@ import {
 import {
   CustodySignedTransaction,
   SignedTransaction,
-} from 'src/utils/types/custom-signed-transaction.type';
+} from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { secretsTypes, throwOrReturn } from 'account-abstraction.secret';
 import {
   forwardRef,
@@ -25,7 +25,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
-import { SignTransactionDto } from 'src/signing-transaction/dtos/sign-transaction.dto';
+import { PrivateServerSignTransactionDto, SignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { NonceManagerService } from 'src/keys-manager/nonce-manager.service';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 const abi = require('erc-20-abi');
@@ -34,8 +34,8 @@ const abi = require('erc-20-abi');
 export class AccountAbstractionStrategyService
   implements IBlockChainPrivateServer
 {
-  private asset: AssetEntity;
-  private network: NetworkEntity;
+  private asset: CommonAsset;
+  private network: CommonNetwork;
   private chain: Chain;
   private bundlerUrl: string;
   private paymasterUrl: string;
@@ -141,18 +141,18 @@ export class AccountAbstractionStrategyService
   }
 
   async getSignedTransaction(
-    dto: SignTransactionDto,
+    dto: PrivateServerSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { amount, asset, keyId, network, secondHalf, to } = dto;
+    const { amount, asset, keyId, network, secondHalf, to, corporateId, transactionId } = dto;
 
     const [privateKey, nonce] = await Promise.all([
-      this.keyManagerService.getFullPrivateKey(keyId, secondHalf),
+      this.keyManagerService.getFullPrivateKey(keyId, secondHalf, corporateId),
       this.nonceManager.getNonce(keyId, network.networkId),
     ]);
 
     const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
 
-    const valueSmallUnit = BigInt(amount * 10 ** this.asset.decimals);
+    const valueSmallUnit = BigInt(Math.floor(amount * 10 ** this.asset.decimals));
 
     let data: string | null = null;
     if (this.asset.type === AssetType.TOKEN) {
@@ -173,6 +173,6 @@ export class AccountAbstractionStrategyService
       nonce,
     );
 
-    return { bundlerUrl: this.bundlerUrl, signedTransaction };
+    return { bundlerUrl: this.bundlerUrl, signedTransaction, transactionId: transactionId, error: null };
   }
 }

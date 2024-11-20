@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { SignTransactionDto } from './dtos/sign-transaction.dto';
-import { KeysManagerService } from '../keys-manager/keys-manager.service';
-import { CustodySignedTransaction } from 'src/utils/types/custom-signed-transaction.type';
+import { PrivateServerSignTransactionDto, SignTransactionDto } from '../../rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import { CustodySignedTransaction } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { BlockchainFactoriesService } from 'src/blockchain/blockchain-strategies.service';
 
 @Injectable()
@@ -13,7 +12,7 @@ export class SigningTransactionService {
 
 
     async signTransaction(
-        dto: SignTransactionDto
+        dto: PrivateServerSignTransactionDto
     ): Promise<CustodySignedTransaction>
      {
         const { asset, network, keyId, secondHalf, to, amount } = dto;
