@@ -10,7 +10,6 @@ export class SigningTransactionService {
         private readonly blockchainFactoriesService : BlockchainFactoriesService,
     ) {}
 
-
     async signTransaction(
         dto: PrivateServerSignTransactionDto
     ): Promise<CustodySignedTransaction>
