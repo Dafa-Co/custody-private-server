@@ -74,6 +74,12 @@ export class CorporatePrivateKeysService {
     corporateId: number,
     encryptedData: string,
   ): Promise<string> {
+
+    // if the string empty return empty string
+    if (!encryptedData) {
+      return '';
+    }
+
     try {
       const corporate = await this.ensureKeysExist(corporateId);
 
