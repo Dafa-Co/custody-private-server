@@ -28,7 +28,6 @@ export interface ITransferTransactionEnum {
 export interface InitBlockChainPrivateServerStrategies {
   asset: CommonAsset;
   network: CommonNetwork;
-  privateKey?: string;
 }
 
 export interface IBlockChainPrivateServer {

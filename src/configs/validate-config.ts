@@ -23,6 +23,9 @@ const envVarsSchema = Joi.object({
   // RabbitMQ configuration
   RABBITMQ_URL: Joi.string().required(),
   RABBITMQ_CUSTODY_PRIVATE_SERVER_QUEUE_NAME: Joi.string().required(),
+
+  // Tron API Key
+  TRON_API_KEY: Joi.string().required(),
 }).strict(); // Ensure only specified keys are allowed
 
 export default envVarsSchema;

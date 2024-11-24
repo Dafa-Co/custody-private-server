@@ -76,28 +76,4 @@ export class KeysManagerService {
 
     return fullPrivateKey;
   }
-
-  encryptData(data: string): string {
-    const publicKey = this.keys.publicKey;
-    const buffer = Buffer.from(data, 'utf8');
-    const encrypted = publicEncrypt(publicKey, buffer);
-    return encrypted.toString('base64');
-  }
-
-  decryptData(encryptedData: string): string {
-    // if the string empty return empty string
-    if (!encryptedData) {
-      return '';
-    }
-
-    const buffer = Buffer.from(encryptedData, 'base64');
-    const decrypted = privateDecrypt(
-      {
-        key: this.keys.privateKey,
-        passphrase: this.keys.passphrase, // Use the passphrase from JSON
-      },
-      buffer,
-    );
-    return decrypted.toString('utf8');
-  }
 }

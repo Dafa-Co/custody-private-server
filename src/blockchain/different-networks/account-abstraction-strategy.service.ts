@@ -28,7 +28,6 @@ import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { PrivateServerSignTransactionDto, SignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { NonceManagerService } from 'src/keys-manager/nonce-manager.service';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
-getChainFromNetwork
 const abi = require('erc-20-abi');
 
 @TransientService()
