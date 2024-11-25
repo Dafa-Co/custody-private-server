@@ -1,4 +1,4 @@
-import { PrivateServerSignTransactionDto, SignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import { PrivateServerSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import {
   IBlockChainPrivateServer,
   InitBlockChainPrivateServerStrategies,
@@ -13,10 +13,13 @@ import { TransientService } from 'utils/decorators/transient.decorator';
 import { forwardRef, Inject } from '@nestjs/common';
 import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { NonceManagerService } from 'src/keys-manager/nonce-manager.service';
-import { CustodySignedTransaction, SignedTronTransaction, TronSmartContractTransferOptions } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
+import {
+  CustodySignedTransaction, TronSmartContractMethodParams, TronTriggerSmartContractOptions,
+} from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { AssetType, CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
 import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.entity';
 import configs from 'src/configs/configs';
+import { SignedTransaction as SignedTronTransaction } from 'tronweb/src/types/Transaction';
 
 const tronMainnet = 'https://api.trongrid.io';
 const tronShastaTestnet = 'https://api.shasta.trongrid.io';
@@ -24,12 +27,11 @@ const tronHeaders = { 'TRON-PRO-API-KEY': configs.TRON_API_KEY };
 
 @TransientService()
 export class TronStrategyService implements IBlockChainPrivateServer {
-  private tronWeb;
+  private tronWeb: TronWeb;
   private host: string;
   private asset: CommonAsset;
   private network: CommonNetwork;
   private chain: Chain;
-  private gasStationPk: string;
 
   constructor(
     @Inject(forwardRef(() => KeysManagerService))
@@ -128,13 +130,13 @@ export class TronStrategyService implements IBlockChainPrivateServer {
     to: string,
     amount: number,
   ): Promise<SignedTronTransaction> {
-    const contractMethod = 'transfer(address,uint256)';
+    const contractMethod: string = 'transfer(address,uint256)';
 
-    const transferOptions: TronSmartContractTransferOptions = {
+    const transferOptions: TronTriggerSmartContractOptions = {
       feeLimit: 30_000_000,
     };
 
-    const contractMethodParams = [
+    const contractMethodParams: TronSmartContractMethodParams = [
       { type: 'address', value: to },
       { type: 'uint256', value: amount * 10 ** this.asset.decimals },
     ];
