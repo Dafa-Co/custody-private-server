@@ -1,4 +1,7 @@
-import { BadRequestException, forwardRef, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PrivateKeys } from './entities/private-key.entity';
 import { Repository } from 'typeorm';
@@ -10,11 +13,9 @@ import { BlockchainFactoriesService } from 'src/blockchain/blockchain-strategies
 import { GenerateKeyPairBridge } from 'rox-custody_common-modules/libs/interfaces/generate-key.interface';
 import { CorporatePrivateKeysService } from './corporate-private-keys.service';
 
-
 @Injectable()
 export class KeysManagerService {
   private keys: { publicKey: string; privateKey: string; passphrase: string };
-
 
   constructor(
     @InjectRepository(PrivateKeys)
@@ -75,5 +76,4 @@ export class KeysManagerService {
 
     return fullPrivateKey;
   }
-
 }

@@ -20,6 +20,4 @@ export class SigningTransactionService {
 
         return await blockchainFactory.getSignedTransaction(dto);
     }
-
-
 }

@@ -7,17 +7,10 @@ import { RpcExceptionsFilter } from 'rox-custody_common-modules/libs/filters/RPC
 
 @Controller('signing-transaction')
 export class SigningTransactionController {
-
-
-
-    constructor(private readonly signingService: SigningTransactionService) {}
-
+  constructor(private readonly signingService: SigningTransactionService) {}
     @MessagePattern({ cmd: _MessagePatterns.signTransaction })
     @UseFilters(RpcExceptionsFilter)
     async generateKey(@Payload() dto: PrivateServerSignTransactionDto) {
       return this.signingService.signTransaction(dto);
     }
-
-
-
 }
