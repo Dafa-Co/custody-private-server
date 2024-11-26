@@ -3,6 +3,7 @@ import { RmqOptions, Transport } from '@nestjs/microservices';
 import configs from './utils/configs/configs';
 import { AppModule } from './app.module';
 
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
