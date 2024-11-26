@@ -11,7 +11,9 @@ import {
   getChainFromNetwork,
   netowkrsTypes,
 } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
+import { TronStrategyService } from './different-networks/tron-strategy.service';
 import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-commons/networks-gategory';
+
 
 @TransientService()
 export class BlockchainFactoriesService {
@@ -23,6 +25,7 @@ export class BlockchainFactoriesService {
     private readonly moduleRef: ModuleRef,
     private readonly bitcoinStrategyService: BitcoinStrategyService,
     private readonly accountAbstractionStrategyService: AccountAbstractionStrategyService,
+    private readonly tronStrategyService: TronStrategyService,
   ) {}
 
   async getStrategy(
@@ -46,6 +49,10 @@ export class BlockchainFactoriesService {
       case NetworkCategory.BitCoin:
       case NetworkCategory.BitcoinTest:
         this.strategy = this.bitcoinStrategyService;
+        break;
+
+      case NetworkCategory.Tron:
+        this.strategy = this.tronStrategyService;
         break;
     }
 

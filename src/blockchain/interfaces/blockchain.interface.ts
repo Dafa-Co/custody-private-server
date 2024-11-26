@@ -9,14 +9,12 @@ export interface IWalletKeys {
     address: string;
 }
 
-
 export enum ValidateTransactionEnum {
  valid = 1,
  dustAmount = 2,
  insufficientBalance = 3,
  blockChainError = 4,
 }
-
 
 export interface ITransferTransactionEnum {
     status: TransactionStatus;
@@ -26,7 +24,6 @@ export interface ITransferTransactionEnum {
       error?: string;
     }
 }
-
 
 export interface InitBlockChainPrivateServerStrategies {
   asset: CommonAsset;
