@@ -5,13 +5,13 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import configs from '../utils/configs/configs';
 import { join } from 'path';
 import { PrivateKeys } from './entities/private-key.entity';
-import { AssetEntity, AssetStatus, AssetType } from '../common/entities/asset.entity';
-import { NetworkEntity, NetworkStatus, NetworkType } from '../common/entities/network.entity';
+import { CommonAsset, AssetStatus, AssetType } from '../../rox-custody_common-modules/libs/entities/asset.entity';
+import { CommonNetwork, NetworkStatus, NetworkType } from '../../rox-custody_common-modules/libs/entities/network.entity';
 
 describe('KeysManagerService', () => {
   let service: KeysManagerService;
 
-  const testNetwork: NetworkEntity = {
+  const testNetwork: CommonNetwork = {
     assets: [],
     logo: null,
     name: 'Test Network',
@@ -21,7 +21,7 @@ describe('KeysManagerService', () => {
     type: NetworkType.PUBLIC,
   };
 
-  const testAsset: AssetEntity = {
+  const testAsset: CommonAsset = {
     contract_address: null,
     logo: null,
     name: 'Test Asset',
