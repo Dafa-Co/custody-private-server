@@ -43,7 +43,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
     const networkObject = getChainFromNetwork(network.networkId);
 
     this.chain = networkObject.chain;
-    this.host = networkObject.node;
+    this.host = this.chain.blockExplorers.default.apiUrl;
     this.tronWeb = new TronWeb({
       fullHost: this.host,
       headers: tronHeaders,
