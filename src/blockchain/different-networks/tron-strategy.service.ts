@@ -8,7 +8,6 @@ import {
 import { TronWeb } from 'tronweb';
 import { Chain } from 'viem';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
-import { supportedNetworks } from 'rox-custody_common-modules/blockchain/global-commons/supported-networks.enum';
 import { TransientService } from 'utils/decorators/transient.decorator';
 import { forwardRef, Inject } from '@nestjs/common';
 import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
@@ -21,8 +20,6 @@ import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.
 import configs from 'src/configs/configs';
 import { SignedTransaction as SignedTronTransaction } from 'tronweb/src/types/Transaction';
 
-const tronMainnet = 'https://api.trongrid.io';
-const tronShastaTestnet = 'https://api.shasta.trongrid.io';
 const tronHeaders = { 'TRON-PRO-API-KEY': configs.TRON_API_KEY };
 
 @TransientService()
@@ -46,16 +43,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
     const networkObject = getChainFromNetwork(network.networkId);
 
     this.chain = networkObject.chain;
-
-    switch (network.networkId) {
-      case supportedNetworks.tron:
-        this.host = tronMainnet;
-        break;
-      case supportedNetworks.shastaTestnet:
-        this.host = tronShastaTestnet;
-        break;
-    }
-
+    this.host = this.chain.blockExplorers.default.apiUrl;
     this.tronWeb = new TronWeb({
       fullHost: this.host,
       headers: tronHeaders,
