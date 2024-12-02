@@ -1,11 +1,9 @@
-import { InternalServerErrorException } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { IBlockChainPrivateServer } from 'src/blockchain/interfaces/blockchain.interface';
-import { AssetEntity } from 'src/common/entities/asset.entity';
+import { CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
 import {
-  NetworkCategory,
-  NetworkEntity,
-} from 'src/common/entities/network.entity';
+  CommonNetwork,
+} from 'rox-custody_common-modules/libs/entities/network.entity';
 import { TransientService } from 'utils/decorators/transient.decorator';
 import { BitcoinStrategyService } from './different-networks/bitcoin-strategy.service';
 import { AccountAbstractionStrategyService } from './different-networks/account-abstraction-strategy.service';
@@ -13,22 +11,26 @@ import {
   getChainFromNetwork,
   netowkrsTypes,
 } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
+import { TronStrategyService } from './different-networks/tron-strategy.service';
+import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-commons/networks-gategory';
+
 
 @TransientService()
 export class BlockchainFactoriesService {
-  private asset: AssetEntity;
-  private network: NetworkEntity;
+  private asset: CommonAsset;
+  private network: CommonNetwork;
   private strategy: IBlockChainPrivateServer;
 
   constructor(
     private readonly moduleRef: ModuleRef,
     private readonly bitcoinStrategyService: BitcoinStrategyService,
     private readonly accountAbstractionStrategyService: AccountAbstractionStrategyService,
+    private readonly tronStrategyService: TronStrategyService,
   ) {}
 
   async getStrategy(
-    asset: AssetEntity,
-    network: NetworkEntity,
+    asset: CommonAsset,
+    network: CommonNetwork,
   ): Promise<IBlockChainPrivateServer> {
     this.asset = asset;
     this.network = network;
@@ -47,6 +49,10 @@ export class BlockchainFactoriesService {
       case NetworkCategory.BitCoin:
       case NetworkCategory.BitcoinTest:
         this.strategy = this.bitcoinStrategyService;
+        break;
+
+      case NetworkCategory.Tron:
+        this.strategy = this.tronStrategyService;
         break;
     }
 
