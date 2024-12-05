@@ -13,7 +13,7 @@ export class CorporatePrivateKeysService {
   ) {}
 
   // Function to generate key pair
-  private async generateKeyPair(): Promise<{
+  async generateKeyPair(): Promise<{
     privateKey: string;
     publicKey: string;
   }> {
@@ -51,7 +51,7 @@ export class CorporatePrivateKeysService {
         privateKey,
         publicKey,
       });
-      await this.corporateRepository.save(corporate);
+      await this.corporateRepository.insert(corporate);
     }
 
     return corporate;
@@ -75,7 +75,7 @@ export class CorporatePrivateKeysService {
     encryptedData: string,
   ): Promise<string> {
 
-    // if the string empty return empty string
+    // if the string is empty return an empty string
     if (!encryptedData) {
       return '';
     }
@@ -83,13 +83,18 @@ export class CorporatePrivateKeysService {
     try {
       const corporate = await this.ensureKeysExist(corporateId);
 
+      console.log("corporate", corporate.privateKey);
+
       const decryptedData = crypto.privateDecrypt(
-        corporate.privateKey,
+        {
+          key: corporate.privateKey,
+        },
         Buffer.from(encryptedData, 'base64'),
       );
 
       return decryptedData.toString('utf8');
     } catch (error) {
+      console.log("error", error);
       throw new InvalidPartOfPrivateKey();
     }
   }
