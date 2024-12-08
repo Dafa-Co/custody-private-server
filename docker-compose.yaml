@@ -8,4 +8,3 @@ services:
       - "4005:4000"
     env_file:
       - .env
-    command: sleep 5000000
