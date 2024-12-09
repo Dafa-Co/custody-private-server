@@ -10,3 +10,12 @@ services:
       - "4005:4000"
     env_file:
       - .env
+    networks:
+      - custody_global_network
+
+
+networks:
+  custody_global_network:
+    external: true
+
+

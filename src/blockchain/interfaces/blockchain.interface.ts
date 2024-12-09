@@ -34,7 +34,8 @@ export interface IBlockChainPrivateServer {
   init(initData: InitBlockChainPrivateServerStrategies): Promise<void>;
   createWallet(): Promise<IWalletKeys>;
   getSignedTransaction(
-    dto: SignTransactionDto
+    dto: SignTransactionDto,
+    privateKey: string,
   ): Promise<CustodySignedTransaction>;
 }
 

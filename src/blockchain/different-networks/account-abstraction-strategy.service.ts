@@ -6,7 +6,6 @@ import {
   PaymasterMode,
   Transaction,
 } from '@biconomy/account';
-import { TransientService } from 'utils/decorators/transient.decorator';
 import { CommonAsset, AssetType } from 'rox-custody_common-modules/libs/entities/asset.entity';
 import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.entity';
 import {
@@ -20,17 +19,15 @@ import {
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { secretsTypes, throwOrReturn } from 'account-abstraction.secret';
 import {
-  forwardRef,
-  Inject,
+  Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
-import { PrivateServerSignTransactionDto, SignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
-import { NonceManagerService } from 'src/keys-manager/nonce-manager.service';
+import { PrivateServerSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
+import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 const abi = require('erc-20-abi');
 
-@TransientService()
+@Injectable()
 export class AccountAbstractionStrategyService
   implements IBlockChainPrivateServer
 {
@@ -41,8 +38,6 @@ export class AccountAbstractionStrategyService
   private paymasterUrl: string;
 
   constructor(
-    @Inject(forwardRef(() => KeysManagerService))
-    private readonly keyManagerService: KeysManagerService,
     private readonly nonceManager: NonceManagerService,
   ) {}
 
@@ -142,11 +137,11 @@ export class AccountAbstractionStrategyService
 
   async getSignedTransaction(
     dto: PrivateServerSignTransactionDto,
+    privateKey: string,
   ): Promise<CustodySignedTransaction> {
     const { amount, asset, keyId, network, secondHalf, to, corporateId, transactionId } = dto;
 
-    const [privateKey, nonce] = await Promise.all([
-      this.keyManagerService.getFullPrivateKey(keyId, secondHalf, corporateId),
+    const [nonce] = await Promise.all([
       this.nonceManager.getNonce(keyId, network.networkId),
     ]);
 
