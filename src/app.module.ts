@@ -6,6 +6,7 @@ import { SigningTransactionModule } from './signing-transaction/signing-transact
 import envVarsSchema from './configs/validate-config';
 import { ConfigModule } from '@nestjs/config';
 import { BlockchainModule } from './blockchain/blockchain.module';
+import { NonceManagerModule } from './nonce-manager/nonce-manager.module';
 
 
 @Module({
@@ -15,6 +16,7 @@ import { BlockchainModule } from './blockchain/blockchain.module';
     KeysManagerModule,
     SigningTransactionModule,
     BlockchainModule,
+    NonceManagerModule
   ],
   controllers: [],
 })

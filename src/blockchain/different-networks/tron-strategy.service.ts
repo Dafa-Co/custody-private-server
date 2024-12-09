@@ -8,10 +8,6 @@ import {
 import { TronWeb } from 'tronweb';
 import { Chain } from 'viem';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
-import { TransientService } from 'utils/decorators/transient.decorator';
-import { forwardRef, Inject } from '@nestjs/common';
-import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
-import { NonceManagerService } from 'src/keys-manager/nonce-manager.service';
 import {
   CustodySignedTransaction, TronSmartContractMethodParams, TronTriggerSmartContractOptions,
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
@@ -19,10 +15,11 @@ import { AssetType, CommonAsset } from 'rox-custody_common-modules/libs/entities
 import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.entity';
 import configs from 'src/configs/configs';
 import { SignedTransaction as SignedTronTransaction } from 'tronweb/src/types/Transaction';
+import { Injectable } from '@nestjs/common';
 
 const tronHeaders = { 'TRON-PRO-API-KEY': configs.TRON_API_KEY };
 
-@TransientService()
+@Injectable()
 export class TronStrategyService implements IBlockChainPrivateServer {
   private tronWeb: TronWeb;
   private host: string;
@@ -31,9 +28,6 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   private chain: Chain;
 
   constructor(
-    @Inject(forwardRef(() => KeysManagerService))
-    private readonly keyManagerService: KeysManagerService,
-    private readonly nonceManager: NonceManagerService,
   ) {}
 
   async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
@@ -60,23 +54,14 @@ export class TronStrategyService implements IBlockChainPrivateServer {
 
   async getSignedTransaction(
     dto: PrivateServerSignTransactionDto,
+    privateKey: string,
   ): Promise<CustodySignedTransaction> {
     const {
       amount,
-      asset,
-      keyId,
-      network,
-      secondHalf,
       to,
-      corporateId,
       transactionId,
     } = dto;
     try {
-      const privateKey = await this.keyManagerService.getFullPrivateKey(
-        keyId,
-        secondHalf,
-        corporateId,
-      );
       this.tronWeb.setPrivateKey(privateKey);
       const signedTransaction =
         this.asset.type === AssetType.COIN
@@ -89,7 +74,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
         error: null,
         transactionId: transactionId,
       };
-    
+
     } catch (error) {
 
       return {
@@ -128,7 +113,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
       { type: 'address', value: to },
       { type: 'uint256', value: amount * 10 ** this.asset.decimals },
     ];
-    
+
     const transaction =
       await this.tronWeb.transactionBuilder.triggerSmartContract(
         this.asset.contract_address,

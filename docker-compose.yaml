@@ -4,8 +4,18 @@ services:
     build:
       context: .
       target: development
+    volumes:
+      - .:/usr/src/app
     ports:
       - "4005:4000"
     env_file:
       - .env
-    command: sleep 5000000
+    networks:
+      - custody_global_network
+
+
+networks:
+  custody_global_network:
+    external: true
+
+

@@ -1,4 +1,4 @@
-import { PrivateKeyNonce } from 'src/keys-manager/entities/nonce.entity';
+import { PrivateKeyNonce } from 'src/nonce-manager/entities/nonce.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
