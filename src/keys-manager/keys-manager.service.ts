@@ -5,10 +5,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { PrivateKeys } from './entities/private-key.entity';
 import { Repository } from 'typeorm';
-import { IGenerateKeyPairResponse } from '../utils/interfaces/generate-ket-pair.interface';
 import { BlockchainFactoriesService } from 'src/blockchain/blockchain-strategies.service';
 import { GenerateKeyPairBridge } from 'rox-custody_common-modules/libs/interfaces/generate-key.interface';
 import { CorporatePrivateKeysService } from './corporate-private-keys.service';
+import { IGenerateKeyPairResponse } from 'rox-custody_common-modules/libs/interfaces/generate-ket-pair.interface';
 
 @Injectable()
 export class KeysManagerService {
