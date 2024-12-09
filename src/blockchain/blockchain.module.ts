@@ -6,9 +6,7 @@ import { TronStrategyService } from './different-networks/tron-strategy.service'
 import { NonceManagerModule } from 'src/nonce-manager/nonce-manager.module';
 
 @Module({
-  imports: [
-    NonceManagerModule
-  ],
+  imports: [NonceManagerModule],
   providers: [
     BlockchainFactoriesService,
     AccountAbstractionStrategyService,

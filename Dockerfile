@@ -46,6 +46,9 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 RUN npm install --only=production
 
+# Copy the environment file
+COPY .env ./
+
 # Copy the build artifacts from the builder stage
 COPY --from=builder /usr/src/app/dist ./dist
 
