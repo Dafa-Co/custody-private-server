@@ -1,11 +1,8 @@
-import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { join } from 'path';
 import configs from '../utils/configs/configs';
 import { DataSource, DataSourceOptions } from 'typeorm';
 
 export const ormConfigs: DataSourceOptions = {
   type: 'mysql',
-  logging: true,
   synchronize: false,
   supportBigNumbers: true,
   host: configs.DATABASE_HOST,
