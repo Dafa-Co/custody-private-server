@@ -5,10 +5,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { PrivateKeys } from './entities/private-key.entity';
 import { Repository } from 'typeorm';
-import { IGenerateKeyPairResponse } from '../utils/interfaces/generate-ket-pair.interface';
 import { BlockchainFactoriesService } from 'src/blockchain/blockchain-strategies.service';
 import { GenerateKeyPairBridge } from 'rox-custody_common-modules/libs/interfaces/generate-key.interface';
 import { CorporatePrivateKeysService } from './corporate-private-keys.service';
+import { IGenerateKeyPairResponse } from 'rox-custody_common-modules/libs/interfaces/generate-ket-pair.interface';
 
 @Injectable()
 export class KeysManagerService {
@@ -19,49 +19,7 @@ export class KeysManagerService {
     private readonly blockchainFactoriesService : BlockchainFactoriesService,
     private corporateKey: CorporatePrivateKeysService
   ) {
-    // this.waer();
   }
-
-
-  // async waer() {
-
-  //   const secondHalf = "E4UCIqiTcUhIEP2BD6THmFdXa0kYRTzUjsv1WjBhPQtYwPlLcO4wOpYHYEfK3A1Sjy3rd0yO2AlTGfAZBsz5GZORvILOI7kbDojQex0meRqxkdTQVdLVVbPquvzOjaZYmMaKRECnhSv6V0E/crC+Ku6oSE9d92SkCk26/zE9VybxXC+yrgRgRGkg7+PCGN7DpQq6K8Pa1CKeTJAqlczhME7IsP1/lUAMB4lMkIAdB/+dg4PrsCFNYQGb/xioDGqvfrn0MgiFkRvoiyjikjXLdLWc+K0vF9ME/WeQqxzCRK601w1eK4uPowBj6GRZm6KgBfEC92wxJMpsutfafDlPyQ==";
-  //   const corporateId = 78;
-  //   const keyId = 109;
-  //   const privateKey = await this.getFullPrivateKey(keyId, secondHalf, corporateId);
-
-  //   console.log(privateKey);
-
-
-  //   // const keyy =  await this.generateKeyPair({
-  //   //   asset: {
-  //   //     name: 'ETH',
-  //   //     symbol: 'ETH',
-  //   //     contract_address: null,
-  //   //     decimals: 18,
-  //   //     logo: 'https://s3.amazonaws.com/rox-custody-assets/eth.png',
-  //   //     type: AssetType.COIN,
-  //   //     network: null,
-  //   //   },
-  //   //   network: {
-  //   //       name: 'ETH',
-  //   //       assets: [],
-  //   //       logo: 'https://s3.amazonaws.com/rox-custody-assets/eth.png',
-  //   //       networkId: 0,
-  //   //       symbol: 'ETH'
-  //   //     },
-  //   //   shouldSaveFullPrivateKey: false,
-  //   //   apiApprovalEssential: null,
-  //   //   corporateId: 78,
-  //   //   vaultId: 1,
-  //   // })
-
-
-  //   // console.log(keyy);
-
-
-  // }
-
 
   async generateKeyPair(
     dto: GenerateKeyPairBridge
