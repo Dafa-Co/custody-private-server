@@ -16,6 +16,7 @@ async function bootstrap() {
         queueOptions: {
           durable: true, // Make sure that the queue is durable
         },
+        persistent: true,
       },
     });
 
@@ -25,3 +26,5 @@ async function bootstrap() {
   await app.init();
 }
 bootstrap();
+
+
