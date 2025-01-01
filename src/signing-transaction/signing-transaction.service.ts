@@ -17,7 +17,7 @@ export class SigningTransactionService {
   async signTransaction(
     dto: PrivateServerSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { asset, network, keyId, secondHalf, corporateId } = dto;
+    const { asset, keyId, secondHalf, corporateId } = dto;
 
     const privateKey = await this.keyManagerService.getFullPrivateKey(
       keyId,
@@ -27,7 +27,6 @@ export class SigningTransactionService {
 
     const blockchainFactory = await this.blockchainFactoriesService.getStrategy(
       asset,
-      network,
     );
 
     return await blockchainFactory.getSignedTransaction(dto, privateKey);

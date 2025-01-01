@@ -7,7 +7,6 @@ import {
   Transaction,
 } from '@biconomy/account';
 import { CommonAsset, AssetType } from 'rox-custody_common-modules/libs/entities/asset.entity';
-import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.entity';
 import {
   IBlockChainPrivateServer,
   InitBlockChainPrivateServerStrategies,
@@ -32,7 +31,6 @@ export class AccountAbstractionStrategyService
   implements IBlockChainPrivateServer
 {
   private asset: CommonAsset;
-  private network: CommonNetwork;
   private chain: Chain;
   private bundlerUrl: string;
   private paymasterUrl: string;
@@ -42,11 +40,10 @@ export class AccountAbstractionStrategyService
   ) {}
 
   async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
-    const { asset, network } = initData;
+    const { asset } = initData;
 
-    this.network = network;
     this.asset = asset;
-    const networkObject = getChainFromNetwork(network.networkId);
+    const networkObject = getChainFromNetwork(asset.networkId);
 
     this.chain = networkObject.chain;
 
@@ -55,7 +52,7 @@ export class AccountAbstractionStrategyService
       : throwOrReturn(secretsTypes.bundler, 'mainnet');
     const paymasterApiKey = throwOrReturn(
       secretsTypes.paymaster,
-      network.networkId.toString(),
+      asset.networkId.toString(),
     );
 
     if (!bundlerSecret || !paymasterApiKey) {
@@ -139,10 +136,10 @@ export class AccountAbstractionStrategyService
     dto: PrivateServerSignTransactionDto,
     privateKey: string,
   ): Promise<CustodySignedTransaction> {
-    const { amount, asset, keyId, network, secondHalf, to, corporateId, transactionId } = dto;
+    const { amount, asset, keyId, secondHalf, to, corporateId, transactionId } = dto;
 
     const [nonce] = await Promise.all([
-      this.nonceManager.getNonce(keyId, network.networkId),
+      this.nonceManager.getNonce(keyId, asset.networkId),
     ]);
 
     const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);

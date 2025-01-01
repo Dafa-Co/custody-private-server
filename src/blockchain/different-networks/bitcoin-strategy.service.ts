@@ -1,4 +1,3 @@
-import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.entity';
 import { CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
 import { BitcoinTransaction, CustodySignedTransaction } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { networks, payments, Psbt, Signer } from 'bitcoinjs-lib';
@@ -15,7 +14,6 @@ import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/globa
 @Injectable()
 export class BitcoinStrategyService implements IBlockChainPrivateServer {
     private asset: CommonAsset;
-    private network: CommonNetwork;
     private NetworkString: string;
     private bitcoinNetwork: networks.Network;
     private ECPair: ECPairAPI;
@@ -29,10 +27,9 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
     async init(
         initData: InitBlockChainPrivateServerStrategies
     ): Promise<void> {
-        const { asset, network } = initData;
+        const { asset } = initData;
         this.asset = asset;
-        this.network = network;
-        const networkObject = getChainFromNetwork(network.networkId);
+        const networkObject = getChainFromNetwork(asset.networkId);
 
         this.NetworkString = networkObject.isTest ? 'testnet' : '';
 
