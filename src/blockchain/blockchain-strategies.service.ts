@@ -1,8 +1,5 @@
 import { IBlockChainPrivateServer } from 'src/blockchain/interfaces/blockchain.interface';
 import { CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
-import {
-  CommonNetwork,
-} from 'rox-custody_common-modules/libs/entities/network.entity';
 import { BitcoinStrategyService } from './different-networks/bitcoin-strategy.service';
 import { AccountAbstractionStrategyService } from './different-networks/account-abstraction-strategy.service';
 import {
@@ -18,7 +15,6 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class BlockchainFactoriesService {
   private asset: CommonAsset;
-  private network: CommonNetwork;
 
   constructor(
     private readonly nonceManager: NonceManagerService,
@@ -26,13 +22,11 @@ export class BlockchainFactoriesService {
 
   async getStrategy(
     asset: CommonAsset,
-    network: CommonNetwork,
   ): Promise<IBlockChainPrivateServer> {
     this.asset = asset;
-    this.network = network;
     let strategy: IBlockChainPrivateServer;
 
-    const { networkId } = network;
+    const { networkId } = asset;
 
     const chain = getChainFromNetwork(networkId);
 
@@ -59,7 +53,6 @@ export class BlockchainFactoriesService {
 
     await strategy.init({
       asset,
-      network,
     });
 
     return strategy;

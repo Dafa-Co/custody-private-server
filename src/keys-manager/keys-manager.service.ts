@@ -24,13 +24,10 @@ export class KeysManagerService {
   async generateKeyPair(
     dto: GenerateKeyPairBridge
   ): Promise<IGenerateKeyPairResponse> {
-    const { asset, network, shouldSaveFullPrivateKey, corporateId } = dto;
-    const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset, network);
+    const { asset, shouldSaveFullPrivateKey, corporateId } = dto;
+    const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset);
     const wallet = await blockchainFactory.createWallet();
     const { address, privateKey } = wallet;
-
-    console.log("privateKey", privateKey);
-
 
     // split the private key into two parts
     const midpoint = Math.ceil(privateKey.length / 2);
@@ -38,14 +35,7 @@ export class KeysManagerService {
     const secondHalf = privateKey.substring(midpoint);
 
 
-    console.log("firstHalf", firstHalf);
-
-    console.log("secondHalf", secondHalf);
-
-
     const encryptedSecondHalf = await this.corporateKey.encryptData(corporateId, secondHalf);
-
-    console.log("encryptedSecondHalf", encryptedSecondHalf);
 
 
     const SavedPrivateKey = await this.privateKeyRepository.insert(
@@ -53,7 +43,6 @@ export class KeysManagerService {
         private_key: shouldSaveFullPrivateKey ? privateKey : firstHalf,
       }),
     );
-
 
 
     const keyData: IGenerateKeyPairResponse = {
@@ -73,7 +62,7 @@ export class KeysManagerService {
     });
 
 
-    console.log("privateKey", privateKey);
+    console.log("privateKey", privateKey, secondHalf);
 
     if (!privateKey) {
       throw new BadRequestException('Private key not found');

@@ -12,7 +12,6 @@ import {
   CustodySignedTransaction, TronSmartContractMethodParams, TronTriggerSmartContractOptions,
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { AssetType, CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
-import { CommonNetwork } from 'rox-custody_common-modules/libs/entities/network.entity';
 import configs from 'src/configs/configs';
 import { SignedTransaction as SignedTronTransaction } from 'tronweb/src/types/Transaction';
 import { Injectable } from '@nestjs/common';
@@ -24,17 +23,15 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   private tronWeb: TronWeb;
   private host: string;
   private asset: CommonAsset;
-  private network: CommonNetwork;
   private chain: Chain;
 
   constructor(
   ) {}
 
   async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
-    const { asset, network } = initData;
-    this.network = network;
+    const { asset } = initData;
     this.asset = asset;
-    const networkObject = getChainFromNetwork(network.networkId);
+    const networkObject = getChainFromNetwork(asset.networkId);
 
     this.chain = networkObject.chain;
     this.host = this.chain.blockExplorers.default.apiUrl;
