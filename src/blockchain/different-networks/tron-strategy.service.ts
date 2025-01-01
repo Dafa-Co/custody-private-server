@@ -28,7 +28,9 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   private chain: Chain;
 
   constructor(
-  ) {}
+  ) {
+    
+  }
 
   async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
     const { asset, network } = initData;
@@ -106,7 +108,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
     const contractMethod: string = 'transfer(address,uint256)';
 
     const transferOptions: TronTriggerSmartContractOptions = {
-      feeLimit: 30_000_000,
+      feeLimit: 100_000_000,
     };
 
     const contractMethodParams: TronSmartContractMethodParams = [
