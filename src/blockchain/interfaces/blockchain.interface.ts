@@ -1,6 +1,5 @@
 import { CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
 import { CustodySignedTransaction } from "../../../rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type";
-import { CommonNetwork } from "rox-custody_common-modules/libs/entities/network.entity";
 import { SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
 
 export interface IWalletKeys {
@@ -10,7 +9,6 @@ export interface IWalletKeys {
 
 export interface InitBlockChainPrivateServerStrategies {
   asset: CommonAsset;
-  network: CommonNetwork;
 }
 
 export interface IBlockChainPrivateServer {
