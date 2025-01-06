@@ -1,10 +1,5 @@
-import { ModuleRef } from '@nestjs/core';
 import { IBlockChainPrivateServer } from 'src/blockchain/interfaces/blockchain.interface';
 import { CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
-import {
-  CommonNetwork,
-} from 'rox-custody_common-modules/libs/entities/network.entity';
-import { TransientService } from 'utils/decorators/transient.decorator';
 import { BitcoinStrategyService } from './different-networks/bitcoin-strategy.service';
 import { AccountAbstractionStrategyService } from './different-networks/account-abstraction-strategy.service';
 import {
@@ -13,29 +8,25 @@ import {
 } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import { TronStrategyService } from './different-networks/tron-strategy.service';
 import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-commons/networks-gategory';
+import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
+import { Injectable } from '@nestjs/common';
 
 
-@TransientService()
+@Injectable()
 export class BlockchainFactoriesService {
   private asset: CommonAsset;
-  private network: CommonNetwork;
-  private strategy: IBlockChainPrivateServer;
 
   constructor(
-    private readonly moduleRef: ModuleRef,
-    private readonly bitcoinStrategyService: BitcoinStrategyService,
-    private readonly accountAbstractionStrategyService: AccountAbstractionStrategyService,
-    private readonly tronStrategyService: TronStrategyService,
+    private readonly nonceManager: NonceManagerService,
   ) {}
 
   async getStrategy(
     asset: CommonAsset,
-    network: CommonNetwork,
   ): Promise<IBlockChainPrivateServer> {
     this.asset = asset;
-    this.network = network;
+    let strategy: IBlockChainPrivateServer;
 
-    const { networkId } = network;
+    const { networkId } = asset;
 
     const chain = getChainFromNetwork(networkId);
 
@@ -43,28 +34,27 @@ export class BlockchainFactoriesService {
 
     switch (category) {
       case NetworkCategory.EVM:
-        this.strategy = this.accountAbstractionStrategyService;
+        strategy = new AccountAbstractionStrategyService(this.nonceManager);
         break;
 
       case NetworkCategory.BitCoin:
       case NetworkCategory.BitcoinTest:
-        this.strategy = this.bitcoinStrategyService;
+        strategy = new BitcoinStrategyService();
         break;
 
       case NetworkCategory.Tron:
-        this.strategy = this.tronStrategyService;
+        strategy = new TronStrategyService();
         break;
     }
 
-    if (!this.strategy) {
+    if (!strategy) {
       throw new Error('wallet library not exist');
     }
 
-    await this.strategy.init({
+    await strategy.init({
       asset,
-      network,
     });
 
-    return this.strategy;
+    return strategy;
   }
 }
