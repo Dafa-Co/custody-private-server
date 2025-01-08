@@ -121,14 +121,9 @@ export class AccountAbstractionStrategyService
         nonceOptions: { nonceKey: nonce },
       });
 
-      // if this is not the first nonce make the initCode With 0x
-      if (nonce > 1) {
-        transaction.initCode = '0x';
-      }
-
-      return smartAccount.signUserOp(transaction);
+      return smartAccount.signUserOp(transaction);;
     } catch (error) {
-      console.log("error", error);
+      console.log("error while sign user ops", error);
     }
   }
 
