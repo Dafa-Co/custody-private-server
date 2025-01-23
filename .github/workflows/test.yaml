@@ -1,0 +1,30 @@
+name: Deploy to custody server
+on:
+  push:
+    branches:
+      - test
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Deploy to dev server
+      env:
+        PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY_2 }}
+        HOST: 49.13.230.22
+        USER: root
+        container_name: test-custody-private-server
+      run: |
+        echo "$PRIVATE_KEY" > private_key
+        chmod 600 private_key
+         ssh -i private_key  -o StrictHostKeyChecking=no  $USER@$HOST  "
+           cd /root/test/custody-private-server
+           git pull --recurse-submodules
+           cd rox-custody_common-modules
+           git checkout test
+           git pull
+           cd ..
+           docker build -t $container_name .
+           docker rm -f $container_name
+           docker run -d -p 4020:3000 --name=$container_name --restart=unless-stopped  $container_name "
