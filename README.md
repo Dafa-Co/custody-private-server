@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Custody_Solution_Api
 
 # for generating migrations
@@ -9,3 +10,6 @@ npm run migration:generate --name=name
 ```bash
 npm run migration:run
 ```
+=======
+# custody-private-server
+>>>>>>> 63cdea6 (first commit)
