@@ -169,9 +169,6 @@ export class AccountAbstractionStrategyService
         nonceOptions: { nonceKey: nonce },
       });
 
-
-      const address = await smartAccount.getAddress();
-
       return transaction;
     } catch (error) {
       if (attempt < maxRetries) {
