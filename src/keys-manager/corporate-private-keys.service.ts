@@ -83,8 +83,6 @@ export class CorporatePrivateKeysService {
     try {
       const corporate = await this.ensureKeysExist(corporateId);
 
-      console.log("corporate", corporate.privateKey);
-
       const decryptedData = crypto.privateDecrypt(
         {
           key: corporate.privateKey,
