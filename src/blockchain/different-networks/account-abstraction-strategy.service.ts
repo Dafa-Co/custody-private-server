@@ -227,7 +227,7 @@ export class AccountAbstractionStrategyService
 
     return {
       bundlerUrl: this.bundlerUrl,
-      signedTransaction: undefined,
+      signedTransaction: signedTransaction,
       transactionId: transactionId,
       error: null,
     };
