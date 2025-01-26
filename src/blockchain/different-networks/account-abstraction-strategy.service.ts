@@ -5,8 +5,12 @@ import {
   createSmartAccountClient,
   PaymasterMode,
   Transaction,
+  UserOperationStruct,
 } from '@biconomy/account';
-import { CommonAsset, AssetType } from 'rox-custody_common-modules/libs/entities/asset.entity';
+import {
+  CommonAsset,
+  AssetType,
+} from 'rox-custody_common-modules/libs/entities/asset.entity';
 import {
   IBlockChainPrivateServer,
   InitBlockChainPrivateServerStrategies,
@@ -17,14 +21,12 @@ import {
   SignedTransaction,
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { secretsTypes, throwOrReturn } from 'account-abstraction.secret';
-import {
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrivateServerSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 const abi = require('erc-20-abi');
+import { Web3 }  from 'web3';
 
 @Injectable()
 export class AccountAbstractionStrategyService
@@ -34,10 +36,9 @@ export class AccountAbstractionStrategyService
   private chain: Chain;
   private bundlerUrl: string;
   private paymasterUrl: string;
+  private web3: Web3;
 
-  constructor(
-    private readonly nonceManager: NonceManagerService,
-  ) {}
+  constructor(private readonly nonceManager: NonceManagerService) {}
 
   async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
     const { asset } = initData;
@@ -63,17 +64,36 @@ export class AccountAbstractionStrategyService
 
     this.bundlerUrl = `https://bundler.biconomy.io/api/v2/${this.chain.id}/${bundlerSecret}`;
     this.paymasterUrl = `https://paymaster.biconomy.io/api/v1/${this.chain.id}/${paymasterApiKey}`;
+
+    // Initialize Web3 with your RPC provider
+    this.web3 = new Web3(new Web3.providers.HttpProvider(this.chain.rpcUrls.default.http[0]));
+  }
+
+  async isContractDeployed(address: string): Promise<boolean> {
+    try {
+      // Check if the address contains contract bytecode
+      const code = await this.web3.eth.getCode(address);
+      return code !== '0x'; // If bytecode is not '0x', contract is deployed
+    } catch (error) {
+      console.error('Error checking contract deployment status:', error);
+      return true; // Or handle the failure as appropriate
+    }
   }
 
   private convertPrivateKeyToSmartAccount(privateKey: string) {
     const account = privateKeyToAccount(privateKey as any);
 
+
     const client = createWalletClient({
       account,
       chain: this.chain,
-      transport: http(),
+      transport: http(this.chain.rpcUrls.default.http[0], {
+        retryCount: 5,
+        retryDelay: 2000,
+      }),
       pollingInterval: 2000,
     });
+
 
     const smartAccount = createSmartAccountClient({
       signer: client,
@@ -103,7 +123,7 @@ export class AccountAbstractionStrategyService
     valueSmallUnit: bigint,
     data: string | null,
     nonce: number,
-  ): Promise<SignedTransaction> {
+  ): Promise<SignedTransaction | null> {
     try {
       const tokenTransaction: Transaction = {
         to,
@@ -116,19 +136,56 @@ export class AccountAbstractionStrategyService
 
       const transactionBody = data ? tokenTransaction : CoinTransaction;
 
-      const transaction = await smartAccount.buildUserOp([transactionBody], {
+      // Directly build the user operation without retrying here
+      const transaction = await this.retryBuildUserOp(
+        smartAccount,
+        [transactionBody],
+        nonce,
+      );
+
+      if (!transaction) {
+        return null;
+      }
+
+      const signedTransaction = await smartAccount.signUserOp(transaction);
+
+      return signedTransaction;
+    } catch (error) {
+      console.log('Error while building or signing user operations:', error);
+      return null; // Or handle the failure as appropriate
+    }
+  }
+
+  private async retryBuildUserOp(
+    smartAccount: BiconomySmartAccountV2,
+    transactionBody: Transaction[],
+    nonce: number,
+    maxRetries: number = 5,
+    attempt: number = 0,
+  ): Promise<Partial<UserOperationStruct> | null> {
+    try {
+      const transaction = await smartAccount.buildUserOp(transactionBody, {
         paymasterServiceData: { mode: PaymasterMode.SPONSORED },
         nonceOptions: { nonceKey: nonce },
       });
 
-      // if this is not the first nonce make the initCode With 0x
-      if (nonce > 1) {
-        transaction.initCode = '0x';
-      }
-
-      return smartAccount.signUserOp(transaction);
+      return transaction;
     } catch (error) {
-      console.log("error", error);
+      if (attempt < maxRetries) {
+        console.log(
+          `Retrying buildUserOp... Attempt ${attempt + 1} of ${maxRetries}`,
+        );
+        return this.retryBuildUserOp(
+          smartAccount,
+          transactionBody,
+          nonce,
+          maxRetries,
+          attempt + 1,
+        );
+      } else {
+        console.log('Error in buildUserOp after retries:', error);
+        return null; // Return null or throw depending on your error handling strategy
+      }
     }
   }
 
@@ -136,15 +193,18 @@ export class AccountAbstractionStrategyService
     dto: PrivateServerSignTransactionDto,
     privateKey: string,
   ): Promise<CustodySignedTransaction> {
-    const { amount, asset, keyId, secondHalf, to, corporateId, transactionId } = dto;
+    const { amount, asset, keyId, secondHalf, to, corporateId, transactionId } =
+      dto;
 
-    const [nonce] = await Promise.all([
-      this.nonceManager.getNonce(keyId, asset.networkId),
-    ]);
+      const [nonce] = await Promise.all([
+        this.nonceManager.getNonce(keyId, asset.networkId),
+      ]);
 
     const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
 
-    const valueSmallUnit = BigInt(Math.floor(amount * 10 ** this.asset.decimals));
+    const valueSmallUnit = BigInt(
+      Math.floor(amount * 10 ** this.asset.decimals),
+    );
 
     let data: string | null = null;
     if (this.asset.type === AssetType.TOKEN) {
@@ -165,6 +225,11 @@ export class AccountAbstractionStrategyService
       nonce,
     );
 
-    return { bundlerUrl: this.bundlerUrl, signedTransaction, transactionId: transactionId, error: null };
+    return {
+      bundlerUrl: this.bundlerUrl,
+      signedTransaction: signedTransaction,
+      transactionId: transactionId,
+      error: null,
+    };
   }
 }
