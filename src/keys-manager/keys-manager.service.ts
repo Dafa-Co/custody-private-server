@@ -62,8 +62,6 @@ export class KeysManagerService {
     });
 
 
-    console.log("privateKey", privateKey, secondHalf);
-
     if (!privateKey) {
       throw new BadRequestException('Private key not found');
     }
