@@ -41,7 +41,6 @@ export class TronStrategyService implements IBlockChainPrivateServer {
       fullHost: this.host,
       headers: tronHeaders,
     });
-    return;
   }
 
   async createWallet(): Promise<IWalletKeys> {
@@ -94,7 +93,11 @@ export class TronStrategyService implements IBlockChainPrivateServer {
       to,
       amount * 10 ** this.asset.decimals,
     );
-    return await this.tronWeb.trx.sign(transaction, privateKey);
+    
+    // extend expiration time one hour in SECONDS => 3600 seconds = 1 hour  
+    const extendedTransaction = await this.tronWeb.transactionBuilder.extendExpiration(transaction, 3600);
+
+    return await this.tronWeb.trx.sign(extendedTransaction, privateKey);
   }
 
   async getSignedTransactionToken(
@@ -120,6 +123,9 @@ export class TronStrategyService implements IBlockChainPrivateServer {
         transferOptions,
         contractMethodParams,
       );
-    return await this.tronWeb.trx.sign(transaction.transaction, privateKey);
+
+    // extend expiration time one hour in SECONDS => 3600 seconds = 1 hour  
+    const extendedTransaction = await this.tronWeb.transactionBuilder.extendExpiration(transaction.transaction, 3600);
+    return await this.tronWeb.trx.sign(extendedTransaction, privateKey);
   }
 }
