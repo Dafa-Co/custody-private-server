@@ -7,6 +7,7 @@ import envVarsSchema from './configs/validate-config';
 import { ConfigModule } from '@nestjs/config';
 import { BlockchainModule } from './blockchain/blockchain.module';
 import { NonceManagerModule } from './nonce-manager/nonce-manager.module';
+import { CustodyLoggerModule } from 'rox-custody_common-modules/libs/services/logger/custody-logger.module';
 
 
 @Module({
@@ -16,8 +17,9 @@ import { NonceManagerModule } from './nonce-manager/nonce-manager.module';
     KeysManagerModule,
     SigningTransactionModule,
     BlockchainModule,
-    NonceManagerModule
+    NonceManagerModule,
+    CustodyLoggerModule
   ],
   controllers: [],
 })
-export class AppModule {}
+export class AppModule { }
