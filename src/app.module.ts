@@ -10,6 +10,7 @@ import { NonceManagerModule } from './nonce-manager/nonce-manager.module';
 import { CustodyLoggerModule } from 'rox-custody_common-modules/libs/services/logger/custody-logger.module';
 import { RmqHelperQueuesInitializerModule } from 'rox-custody_common-modules/libs/services/rmq-helper-queues-initializer/rmq-helper-queues-initializer.module';
 import configs from './configs/configs';
+import { AppControllerRmq } from './app.controller.rmq';
 
 
 @Module({
@@ -26,6 +27,8 @@ import configs from './configs/configs';
     ),
     CustodyLoggerModule
   ],
-  controllers: [],
+  controllers: [
+    AppControllerRmq,
+  ],
 })
 export class AppModule { }
