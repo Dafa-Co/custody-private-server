@@ -27,4 +27,4 @@ jobs:
          cd ..
          docker build -t demo-custody-private-server .
         docker rm -f demo-custody-private-server
-        docker run -d -p 4024:3000 --name=demo-custody-private-server --restart=unless-stopped  demo-custody-private-server "
+        docker run -d -p 4024:3000 --name=demo-custody-private-server --log-driver=fluentd --log-opt fluentd-address=localhost:24224 --restart=unless-stopped  demo-custody-private-server "
