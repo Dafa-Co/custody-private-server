@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
-import { NonceManagerModule } from 'src/nonce-manager/nonce-manager.module';
 import { ContractSignerFactory } from './contract-signer.factory';
-import { EVMContractSignerStrategy } from './strategies/evm-contract-signer.strategy';
+import { EVMContractSignerModule } from './strategies/evm-contract-signer/evm-contract-signer.module';
 
 @Module({
-  imports: [NonceManagerModule],
-  providers: [ContractSignerFactory, EVMContractSignerStrategy],
-  exports: [ContractSignerFactory, EVMContractSignerStrategy],
+  imports: [EVMContractSignerModule],
+  providers: [ContractSignerFactory],
+  exports: [ContractSignerFactory],
 })
 export class ContractSignerModule {}

@@ -1,4 +1,4 @@
-import { CustodySignedTransaction } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
+import { CustodySignedContractTransaction } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { SignContractTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 
 export abstract class ContractSignerStrategy {
@@ -6,5 +6,5 @@ export abstract class ContractSignerStrategy {
   abstract signContractTransaction(
     dto: SignContractTransactionDto,
     privateKey: string,
-  ): Promise<CustodySignedTransaction>;
+  ): Promise<CustodySignedContractTransaction>;
 }
