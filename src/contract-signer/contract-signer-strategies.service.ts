@@ -5,7 +5,7 @@ import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-co
 import { EVMContractSignerStrategy } from './strategies/evm-contract-signer/evm-contract-signer.strategy';
 
 @Injectable()
-export class ContractSignerFactory {
+export class ContractSignerStrategiesService {
   constructor(
     private readonly evmContractSignerStrategy: EVMContractSignerStrategy,
   ) {}
