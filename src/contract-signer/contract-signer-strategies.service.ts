@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { ContractSignerStrategy } from './strategies/abstract-contract-signer.strategy';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-commons/networks-gategory';
 import { EVMContractSignerStrategy } from './strategies/evm-contract-signer/evm-contract-signer.strategy';
+import { IContractSignerStrategy } from './strategies/contract-signer-strategy.interface';
 
 @Injectable()
 export class ContractSignerStrategiesService {
@@ -12,10 +12,10 @@ export class ContractSignerStrategiesService {
 
   async getContractSignerStrategy(
     networkId: number,
-  ): Promise<ContractSignerStrategy> {
+  ): Promise<IContractSignerStrategy> {
     const network = getChainFromNetwork(networkId);
 
-    let strategy: ContractSignerStrategy;
+    let strategy: IContractSignerStrategy;
     switch (network.category) {
       case NetworkCategory.EVM:
         strategy = this.evmContractSignerStrategy;
