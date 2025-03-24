@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PrivateKeys } from './entities/private-key.entity';
 import { Repository } from 'typeorm';
@@ -12,20 +9,19 @@ import { IGenerateKeyPairResponse } from 'rox-custody_common-modules/libs/interf
 
 @Injectable()
 export class KeysManagerService {
-
   constructor(
     @InjectRepository(PrivateKeys)
     private privateKeyRepository: Repository<PrivateKeys>,
-    private readonly blockchainFactoriesService : BlockchainFactoriesService,
-    private corporateKey: CorporatePrivateKeysService
-  ) {
-  }
+    private readonly blockchainFactoriesService: BlockchainFactoriesService,
+    private corporateKey: CorporatePrivateKeysService,
+  ) {}
 
   async generateKeyPair(
-    dto: GenerateKeyPairBridge
+    dto: GenerateKeyPairBridge,
   ): Promise<IGenerateKeyPairResponse> {
     const { asset, shouldSaveFullPrivateKey, corporateId } = dto;
-    const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset);
+    const blockchainFactory =
+      await this.blockchainFactoriesService.getStrategy(asset);
     const wallet = await blockchainFactory.createWallet();
     const { address, privateKey } = wallet;
 
@@ -34,16 +30,16 @@ export class KeysManagerService {
     const firstHalf = privateKey.substring(0, midpoint);
     const secondHalf = privateKey.substring(midpoint);
 
-
-    const encryptedSecondHalf = await this.corporateKey.encryptData(corporateId, secondHalf);
-
+    const encryptedSecondHalf = await this.corporateKey.encryptData(
+      corporateId,
+      secondHalf,
+    );
 
     const SavedPrivateKey = await this.privateKeyRepository.insert(
       this.privateKeyRepository.create({
         private_key: shouldSaveFullPrivateKey ? privateKey : firstHalf,
       }),
     );
-
 
     const keyData: IGenerateKeyPairResponse = {
       address,
@@ -54,19 +50,25 @@ export class KeysManagerService {
     return keyData;
   }
 
-  async getFullPrivateKey(keyId: number, secondHalf: string, corporateId: number): Promise<string> {
+  async getFullPrivateKey(
+    keyId: number,
+    secondHalf: string,
+    corporateId: number,
+  ): Promise<string> {
     const privateKey = await this.privateKeyRepository.findOne({
       where: {
         id: keyId,
       },
     });
 
-
     if (!privateKey) {
       throw new BadRequestException('Private key not found');
     }
 
-    const decryptedSecondHalf = await this.corporateKey.decryptData(corporateId, secondHalf);
+    const decryptedSecondHalf = await this.corporateKey.decryptData(
+      corporateId,
+      secondHalf,
+    );
 
     const fullPrivateKey = privateKey.private_key + decryptedSecondHalf;
 
