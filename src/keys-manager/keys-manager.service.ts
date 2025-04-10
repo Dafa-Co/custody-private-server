@@ -79,4 +79,14 @@ export class KeysManagerService {
 
     return await this.corporateKey.decryptData(corporateId, encryptedPrivateKey);
   }
+
+  async cleanUpPrivateKey(keyId: number): Promise<void> {
+    await this.privateKeyRepository
+      .createQueryBuilder()
+      .delete()
+      .from(PrivateKeys)
+      .where('id = :keyId', { keyId })
+      .andWhere('createdAt < NOW() + INTERVAL 10 MINUTE')
+      .execute();
+  }
 }
