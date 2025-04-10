@@ -61,12 +61,6 @@ export class KeysManagerService {
       address,
       keyId: SavedPrivateKey.identifiers[0].id,
       backupStoragesPart: keysParts.backupStoragesPart,
-      // keysParts: keysParts
-      //   .backupStorageParts
-      //   .map((part) => ({
-      //     backupStorageId: part.storageId,
-      //     privateKeySlice: part.keyPart,
-      //   })),
     };
   }
 
