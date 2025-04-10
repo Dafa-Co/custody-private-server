@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PrivateKeys } from './entities/private-key.entity';
 import { Repository } from 'typeorm';
@@ -12,7 +9,6 @@ import { IGenerateKeyPairResponse } from 'rox-custody_common-modules/libs/interf
 
 @Injectable()
 export class KeysManagerService {
-
   constructor(
     @InjectRepository(PrivateKeys)
     private privateKeyRepository: Repository<PrivateKeys>,
@@ -36,7 +32,7 @@ export class KeysManagerService {
   }
 
   async generateKeyPair(
-    dto: GenerateKeyPairBridge
+    dto: GenerateKeyPairBridge,
   ): Promise<IGenerateKeyPairResponse> {
     const {
       asset,
@@ -80,7 +76,6 @@ export class KeysManagerService {
         id: keyId,
       },
     });
-
 
     if (!privateKey) {
       throw new BadRequestException('Private key not found');
