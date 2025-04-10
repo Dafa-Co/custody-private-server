@@ -16,45 +16,65 @@ export class KeysManagerService {
   constructor(
     @InjectRepository(PrivateKeys)
     private privateKeyRepository: Repository<PrivateKeys>,
-    private readonly blockchainFactoriesService : BlockchainFactoriesService,
+    private readonly blockchainFactoriesService: BlockchainFactoriesService,
     private corporateKey: CorporatePrivateKeysService
   ) {
+  }
+
+  private getKeysParts(
+    percentageToStoreInCustody: number,
+    encryptedPrivateKey: string,
+  ) {
+    const custodyPartLength = Math.floor(encryptedPrivateKey.length * (percentageToStoreInCustody / 100));
+    const custodyPart = encryptedPrivateKey.substring(0, custodyPartLength);
+    const backupStoragePrivateKey = encryptedPrivateKey.substring(custodyPartLength);
+
+    return {
+      backupStoragesPart: backupStoragePrivateKey,
+      custodyPart,
+    }
   }
 
   async generateKeyPair(
     dto: GenerateKeyPairBridge
   ): Promise<IGenerateKeyPairResponse> {
-    const { asset, shouldSaveFullPrivateKey, corporateId } = dto;
+    const {
+      asset,
+      corporateId,
+      apiApprovalEssential: { percentageToStoreInCustody },
+    } = dto;
+
     const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset);
     const wallet = await blockchainFactory.createWallet();
     const { address, privateKey } = wallet;
 
-    // split the private key into two parts
-    const midpoint = Math.ceil(privateKey.length / 2);
-    const firstHalf = privateKey.substring(0, midpoint);
-    const secondHalf = privateKey.substring(midpoint);
+    const encryptedPrivateKey = await this.corporateKey.encryptData(corporateId, privateKey);
 
-
-    const encryptedSecondHalf = await this.corporateKey.encryptData(corporateId, secondHalf);
-
+    const keysParts = this.getKeysParts(
+      percentageToStoreInCustody,
+      encryptedPrivateKey,
+    );
 
     const SavedPrivateKey = await this.privateKeyRepository.insert(
       this.privateKeyRepository.create({
-        private_key: shouldSaveFullPrivateKey ? privateKey : firstHalf,
-      }),
+        private_key: keysParts.custodyPart,
+      })
     );
 
-
-    const keyData: IGenerateKeyPairResponse = {
+    return {
       address,
-      HalfOfPrivateKey: shouldSaveFullPrivateKey ? '' : encryptedSecondHalf,
       keyId: SavedPrivateKey.identifiers[0].id,
+      backupStoragesPart: keysParts.backupStoragesPart,
+      // keysParts: keysParts
+      //   .backupStorageParts
+      //   .map((part) => ({
+      //     backupStorageId: part.storageId,
+      //     privateKeySlice: part.keyPart,
+      //   })),
     };
-
-    return keyData;
   }
 
-  async getFullPrivateKey(keyId: number, secondHalf: string, corporateId: number): Promise<string> {
+  async getFullPrivateKey(keyId: number, keyPart: string, corporateId: number): Promise<string> {
     const privateKey = await this.privateKeyRepository.findOne({
       where: {
         id: keyId,
@@ -66,10 +86,8 @@ export class KeysManagerService {
       throw new BadRequestException('Private key not found');
     }
 
-    const decryptedSecondHalf = await this.corporateKey.decryptData(corporateId, secondHalf);
+    const encryptedPrivateKey = privateKey.private_key + keyPart;
 
-    const fullPrivateKey = privateKey.private_key + decryptedSecondHalf;
-
-    return fullPrivateKey;
+    return await this.corporateKey.decryptData(corporateId, encryptedPrivateKey);
   }
 }

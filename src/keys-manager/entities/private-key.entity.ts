@@ -6,7 +6,7 @@ export class PrivateKeys {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: 'varchar', length: 4096 })
   private_key: string;
 
   @OneToMany(() => PrivateKeyNonce, (usage) => usage.privateKey)

@@ -193,7 +193,7 @@ export class AccountAbstractionStrategyService
     dto: PrivateServerSignTransactionDto,
     privateKey: string,
   ): Promise<CustodySignedTransaction> {
-    const { amount, asset, keyId, secondHalf, to, corporateId, transactionId } =
+    const { amount, asset, keyId, to, corporateId, transactionId } =
       dto;
 
       const [nonce] = await Promise.all([
