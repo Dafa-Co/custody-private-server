@@ -20,11 +20,11 @@ export class SigningTransactionService {
   async signTransaction(
     dto: PrivateServerSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { asset, keyId, secondHalf, corporateId } = dto;
+    const { asset, keyId, keyPart, corporateId } = dto;
 
     const privateKey = await this.keyManagerService.getFullPrivateKey(
       keyId,
-      secondHalf,
+      keyPart,
       corporateId,
     );
 
