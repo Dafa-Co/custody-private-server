@@ -46,6 +46,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     async getSignedTransaction(
         dto: PrivateServerSignTransactionDto,
         privateKey: string,
+        secondPrivateKey: string
     ): Promise<CustodySignedTransaction> {
         const {
             amount,
@@ -53,8 +54,10 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
             transactionId,
         } = dto;
         try {
-
-            const signedTransaction = await this.getSignedTransactionCoin(privateKey, to, amount);
+            const signedTransaction = 
+                this.asset.type === AssetType.COIN 
+                ? await this.getSignedTransactionCoin(privateKey, to, amount, secondPrivateKey)
+                : await this.getSignedTransactionToken(privateKey, to, amount, secondPrivateKey);
     
             return {
                 bundlerUrl: this.host,
@@ -78,11 +81,15 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         privateKey: string,
         to: string,
         amount: number,
+        secondPrivateKey: string
     ): Promise<SignedSolanaTransaction> {
         const connection = new Connection(this.host, "confirmed");
         const sender = Keypair.fromSecretKey(
             Uint8Array.from(Buffer.from(privateKey, 'base64'))
         );
+        const feePayer = Keypair.fromSecretKey(
+            Uint8Array.from(Buffer.from(secondPrivateKey, 'base64'))
+        );    
         // Recipient public key
         const toPubkey = new PublicKey(to);
         // Create transaction
@@ -99,8 +106,11 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     
         transaction.recentBlockhash = blockhash;
         transaction.lastValidBlockHeight = lastValidBlockHeight;
-        transaction.feePayer = sender.publicKey;
-        transaction.sign(sender);
+        transaction.feePayer = feePayer.publicKey;
+        // Both accounts must sign:
+        // 1. Fee payer signs to pay fees
+        // 2. Sender signs to authorize the transfer
+        transaction.sign(feePayer, sender);
     
         const rawTx = transaction.serialize();
 
@@ -120,9 +130,13 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         privateKey: string,
         to: string,
         amount: number,
+        secondPrivateKey: string
     ): Promise<SignedSolanaTransaction> {
         const connection = new Connection(this.host, "confirmed");
         const sender = Keypair.fromSecretKey(Uint8Array.from(Buffer.from(privateKey, 'base64')));
+        const feePayer = Keypair.fromSecretKey(
+            Uint8Array.from(Buffer.from(secondPrivateKey, 'base64'))
+        ); 
         // Token mint address
         const tokenMint = new PublicKey(this.asset.contract_address);
         // Get source token account
@@ -172,9 +186,11 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
 
         transaction.recentBlockhash = blockhash;
-        transaction.feePayer = sender.publicKey;
-        // Sign and send transaction
-        transaction.sign(sender);
+        transaction.feePayer = feePayer.publicKey;
+        // Both accounts must sign:
+        // 1. Fee payer signs to pay fees
+        // 2. Sender signs to authorize the transfer
+        transaction.sign(feePayer, sender);
 
         const rawTx = transaction.serialize();
         const txId = await connection.sendRawTransaction(rawTx, {
