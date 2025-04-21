@@ -11,18 +11,13 @@ import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-co
 import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 import { Injectable } from '@nestjs/common';
 
-
 @Injectable()
 export class BlockchainFactoriesService {
   private asset: CommonAsset;
 
-  constructor(
-    private readonly nonceManager: NonceManagerService,
-  ) {}
+  constructor(private readonly nonceManager: NonceManagerService) {}
 
-  async getStrategy(
-    asset: CommonAsset,
-  ): Promise<IBlockChainPrivateServer> {
+  async getStrategy(asset: CommonAsset): Promise<IBlockChainPrivateServer> {
     this.asset = asset;
     let strategy: IBlockChainPrivateServer;
 
