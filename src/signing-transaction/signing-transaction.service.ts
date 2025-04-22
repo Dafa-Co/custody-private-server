@@ -45,6 +45,8 @@ export class SigningTransactionService {
       corporateId,
     );
 
+    console.log('privateKeyyy', privateKey);
+
     const contractSignerStrategy =
       await this.contractSignerFactory.getContractSignerStrategy(networkId);
 
