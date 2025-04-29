@@ -1,10 +1,23 @@
-import { Injectable } from "@nestjs/common";
-import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from "../interfaces/blockchain.interface";
-import { CustodySignedTransaction, SignedSolanaTransaction } from "rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type";
-import { PrivateServerSignTransactionDto, SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
-import { getChainFromNetwork } from "rox-custody_common-modules/blockchain/global-commons/get-network-chain";
-import { AssetType, CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
-import { Chain } from "viem";
+import { Injectable } from '@nestjs/common';
+import {
+    IBlockChainPrivateServer,
+    InitBlockChainPrivateServerStrategies,
+    IWalletKeys,
+} from '../interfaces/blockchain.interface';
+import {
+    CustodySignedTransaction,
+    SignedSolanaTransaction,
+} from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
+import {
+    PrivateServerSignTransactionDto,
+    SignTransactionDto,
+} from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
+import {
+    AssetType,
+    CommonAsset,
+} from 'rox-custody_common-modules/libs/entities/asset.entity';
+import { Chain } from 'viem';
 import {
     Connection,
     Keypair,
@@ -16,7 +29,7 @@ import {
 import {
     getAssociatedTokenAddress,
     createAssociatedTokenAccountInstruction,
-    createTransferCheckedInstruction
+    createTransferCheckedInstruction,
 } from '@solana/spl-token';
 
 @Injectable()
@@ -29,13 +42,11 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
         const { asset } = initData;
         const networkObject = getChainFromNetwork(asset.networkId);
-        console.log("networkObject",networkObject);
+        console.log('networkObject', networkObject);
 
         this.asset = asset;
         this.chain = networkObject.chain;
         this.host = this.chain.blockExplorers.default.apiUrl;
-        
-        
     }
 
     async createWallet(): Promise<IWalletKeys> {
@@ -50,28 +61,32 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     async getSignedTransaction(
         dto: PrivateServerSignTransactionDto,
         privateKey: string,
-        secondPrivateKey: string
+        secondPrivateKey: string,
     ): Promise<CustodySignedTransaction> {
-        const {
-            amount,
-            to,
-            transactionId,
-        } = dto;
+        const { amount, to, transactionId } = dto;
         try {
-            const signedTransaction = 
-                this.asset.type === AssetType.COIN 
-                ? await this.getSignedTransactionCoin(privateKey, to, amount, secondPrivateKey)
-                : await this.getSignedTransactionToken(privateKey, to, amount, secondPrivateKey);
-    
+            const signedTransaction =
+                this.asset.type === AssetType.COIN
+                    ? await this.getSignedTransactionCoin(
+                        privateKey,
+                        to,
+                        amount,
+                        secondPrivateKey,
+                    )
+                    : await this.getSignedTransactionToken(
+                        privateKey,
+                        to,
+                        amount,
+                        secondPrivateKey,
+                    );
+
             return {
                 bundlerUrl: this.host,
                 signedTransaction: signedTransaction,
                 error: null,
                 transactionId: transactionId,
             };
-    
         } catch (error) {
-    
             return {
                 bundlerUrl: this.host,
                 signedTransaction: null,
@@ -80,20 +95,26 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
             };
         }
     }
-    
+
     async getSignedTransactionCoin(
         privateKey: string,
         to: string,
         amount: number,
-        secondPrivateKey: string
+        secondPrivateKey: string,
     ): Promise<SignedSolanaTransaction> {
-        const connection = new Connection(this.host, "confirmed");
+        const connection = new Connection(this.host, 'confirmed');
+        let feePayer = null;
+
         const sender = Keypair.fromSecretKey(
-            Uint8Array.from(Buffer.from(privateKey, 'base64'))
+            Uint8Array.from(Buffer.from(privateKey, 'base64')),
         );
-        const feePayer = Keypair.fromSecretKey(
-            Uint8Array.from(Buffer.from(secondPrivateKey, 'base64'))
-        );    
+
+        if (secondPrivateKey) {
+            feePayer = Keypair.fromSecretKey(
+                Uint8Array.from(Buffer.from(secondPrivateKey, 'base64')),
+            );
+        }
+
         // Recipient public key
         const toPubkey = new PublicKey(to);
         // Create transaction
@@ -102,65 +123,79 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
                 fromPubkey: sender.publicKey,
                 toPubkey: toPubkey,
                 lamports: Math.floor(amount * LAMPORTS_PER_SOL), // Convert SOL to lamports
-            })
+            }),
         );
+
         // Get recent blockhash and last valid block height
         // TODO look at latest block hash expiration
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-    
+        const { blockhash, lastValidBlockHeight } =
+            await connection.getLatestBlockhash();
+
         transaction.recentBlockhash = blockhash;
         transaction.lastValidBlockHeight = lastValidBlockHeight;
-        transaction.feePayer = feePayer.publicKey;
+        transaction.feePayer = feePayer ? feePayer.publicKey : sender.publicKey;
         // Both accounts must sign:
-        // 1. Fee payer signs to pay fees
-        // 2. Sender signs to authorize the transfer
-        transaction.sign(feePayer, sender);
-    
+        if (feePayer) {
+            // 1. Fee payer signs to pay fees
+            // 2. Sender signs to authorize the transfer
+            transaction.sign(feePayer, sender);
+        } else {
+            transaction.sign(sender);
+        }
+
         const rawTx = transaction.serialize();
 
-        await connection.sendRawTransaction(rawTx, {
-            skipPreflight: false,
-            preflightCommitment: "confirmed"
-        });
+        try {
+            await connection.sendRawTransaction(rawTx, {
+                skipPreflight: false,
+                preflightCommitment: 'confirmed',
+            });
+        } catch (error) {
+            console.info('error: ', error);
+        }
 
         // Serialize and return
         return {
             rawTransaction: transaction.serialize(),
-            signature: transaction.signature?.toString('base64') || ''
+            signature: transaction.signature?.toString('base64') || '',
         };
     }
-    
+
     async getSignedTransactionToken(
         privateKey: string,
         to: string,
         amount: number,
-        secondPrivateKey: string
+        secondPrivateKey: string,
     ): Promise<SignedSolanaTransaction> {
-        const connection = new Connection(this.host, "confirmed");
-        const sender = Keypair.fromSecretKey(Uint8Array.from(Buffer.from(privateKey, 'base64')));
+        const connection = new Connection(this.host, 'confirmed');
+        const sender = Keypair.fromSecretKey(
+            Uint8Array.from(Buffer.from(privateKey, 'base64')),
+        );
         const feePayer = Keypair.fromSecretKey(
-            Uint8Array.from(Buffer.from(secondPrivateKey, 'base64'))
-        ); 
+            Uint8Array.from(Buffer.from(secondPrivateKey, 'base64')),
+        );
         // Token mint address
         const tokenMint = new PublicKey(this.asset.contract_address);
         // Get source token account
         const sourceTokenAccount = await getAssociatedTokenAddress(
             tokenMint,
             sender.publicKey,
-            false
-        );           
+            false,
+        );
         // Handle Destination Account
         const receiverAddress = new PublicKey(to);
         const destinationTokenAccount = await getAssociatedTokenAddress(
             tokenMint,
             receiverAddress,
-            false
+            false,
         );
         // Check if destination token account exists
-        const destinationAccountInfo = await connection.getAccountInfo(destinationTokenAccount);
+        const destinationAccountInfo = await connection.getAccountInfo(
+            destinationTokenAccount,
+        );
         // Create transaction
         const transaction = new Transaction();
-        
+
         // Add creation instruction if destination account doesn't exist
         if (!destinationAccountInfo) {
             transaction.add(
@@ -168,11 +203,11 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
                     sender.publicKey,
                     destinationTokenAccount,
                     receiverAddress,
-                    tokenMint
-                )
+                    tokenMint,
+                ),
             );
         }
-        
+
         // Add transfer instruction
         amount = Math.round(amount * 10 ** this.asset.decimals); // token amount
         transaction.add(
@@ -182,12 +217,13 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
                 destinationTokenAccount,
                 sender.publicKey,
                 amount,
-                this.asset.decimals
-            )
+                this.asset.decimals,
+            ),
         );
 
         // Set transaction parameters
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+        const { blockhash, lastValidBlockHeight } =
+            await connection.getLatestBlockhash();
 
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = feePayer.publicKey;
@@ -199,21 +235,20 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         const rawTx = transaction.serialize();
         const txId = await connection.sendRawTransaction(rawTx, {
             skipPreflight: false,
-            preflightCommitment: "confirmed"
+            preflightCommitment: 'confirmed',
         });
-        
+
         // Confirm transaction
         await connection.confirmTransaction({
             signature: txId,
             blockhash,
-            lastValidBlockHeight
+            lastValidBlockHeight,
         });
 
         // Serialize and return
         return {
             rawTransaction: transaction.serialize(),
-            signature: transaction.signature?.toString('base64') || ''
+            signature: transaction.signature?.toString('base64') || '',
         };
     }
-
 }
