@@ -29,17 +29,21 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
         const { asset } = initData;
         const networkObject = getChainFromNetwork(asset.networkId);
+        console.log("networkObject",networkObject);
 
         this.asset = asset;
-        this.host = this.chain.blockExplorers.default.apiUrl;
         this.chain = networkObject.chain;
+        this.host = this.chain.blockExplorers.default.apiUrl;
+        
+        
     }
 
     async createWallet(): Promise<IWalletKeys> {
         const sollanaWallet = Keypair.generate();
+        console.log(sollanaWallet);
         const privateKey = Buffer.from(sollanaWallet.secretKey).toString('base64');
         const address = sollanaWallet.publicKey.toBase58();
-        
+        console.log({ privateKey, address });
         return { privateKey, address };
     }
 
