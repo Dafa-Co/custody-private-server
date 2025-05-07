@@ -42,7 +42,6 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
         const { asset } = initData;
         const networkObject = getChainFromNetwork(asset.networkId);
-        console.log('networkObject', networkObject);
 
         this.asset = asset;
         this.chain = networkObject.chain;
@@ -51,10 +50,8 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
 
     async createWallet(): Promise<IWalletKeys> {
         const sollanaWallet = Keypair.generate();
-        console.log(sollanaWallet);
         const privateKey = Buffer.from(sollanaWallet.secretKey).toString('base64');
         const address = sollanaWallet.publicKey.toBase58();
-        console.log({ privateKey, address });
         return { privateKey, address };
     }
 
@@ -145,18 +142,8 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
 
         const rawTx = transaction.serialize();
 
-        try {
-            await connection.sendRawTransaction(rawTx, {
-                skipPreflight: false,
-                preflightCommitment: 'confirmed',
-            });
-        } catch (error) {
-            console.info('error: ', error);
-        }
-
-        // Serialize and return
         return {
-            rawTransaction: transaction.serialize(),
+            rawTransaction: rawTx,
             signature: transaction.signature?.toString('base64') || '',
         };
     }
@@ -167,88 +154,77 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         amount: number,
         secondPrivateKey: string,
     ): Promise<SignedSolanaTransaction> {
-        const connection = new Connection(this.host, 'confirmed');
-        const sender = Keypair.fromSecretKey(
-            Uint8Array.from(Buffer.from(privateKey, 'base64')),
-        );
-        const feePayer = Keypair.fromSecretKey(
-            Uint8Array.from(Buffer.from(secondPrivateKey, 'base64')),
-        );
-        // Token mint address
-        const tokenMint = new PublicKey(this.asset.contract_address);
-        // Get source token account
-        const sourceTokenAccount = await getAssociatedTokenAddress(
-            tokenMint,
-            sender.publicKey,
-            false,
-        );
-        // Handle Destination Account
-        const receiverAddress = new PublicKey(to);
-        const destinationTokenAccount = await getAssociatedTokenAddress(
-            tokenMint,
-            receiverAddress,
-            false,
-        );
-        // Check if destination token account exists
-        const destinationAccountInfo = await connection.getAccountInfo(
-            destinationTokenAccount,
-        );
-        // Create transaction
-        const transaction = new Transaction();
 
-        // Add creation instruction if destination account doesn't exist
-        if (!destinationAccountInfo) {
+            const connection = new Connection(this.host, 'confirmed');
+            const sender = Keypair.fromSecretKey(
+                Uint8Array.from(Buffer.from(privateKey, 'base64')),
+            );
+            const feePayer = Keypair.fromSecretKey(
+                Uint8Array.from(Buffer.from(secondPrivateKey, 'base64')),
+            );
+            // Token mint address
+            const tokenMint = new PublicKey(this.asset.contract_address);
+            // Get source token account
+            const sourceTokenAccount = await getAssociatedTokenAddress(
+                tokenMint,
+                sender.publicKey,
+                false,
+            );
+            // Handle Destination Account
+            const receiverAddress = new PublicKey(to);
+            const destinationTokenAccount = await getAssociatedTokenAddress(
+                tokenMint,
+                receiverAddress,
+                false,
+            );
+            // Check if destination token account exists
+            const destinationAccountInfo = await connection.getAccountInfo(
+                destinationTokenAccount,
+            );
+            // Create transaction
+            const transaction = new Transaction();
+    
+            // Add creation instruction if destination account doesn't exist
+            if (!destinationAccountInfo) {
+                transaction.add(
+                    createAssociatedTokenAccountInstruction(
+                        sender.publicKey,
+                        destinationTokenAccount,
+                        receiverAddress,
+                        tokenMint,
+                    ),
+                );
+            }
+    
+            // Add transfer instruction
+            amount = Math.round(amount * 10 ** this.asset.decimals); // token amount
             transaction.add(
-                createAssociatedTokenAccountInstruction(
-                    sender.publicKey,
-                    destinationTokenAccount,
-                    receiverAddress,
+                createTransferCheckedInstruction(
+                    sourceTokenAccount,
                     tokenMint,
+                    destinationTokenAccount,
+                    sender.publicKey,
+                    amount,
+                    this.asset.decimals,
                 ),
             );
-        }
+    
+            // Set transaction parameters
+            const { blockhash, lastValidBlockHeight } =
+                await connection.getLatestBlockhash();
+    
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = feePayer.publicKey;
+            // Both accounts must sign:
+            // 1. Fee payer signs to pay fees
+            // 2. Sender signs to authorize the transfer
+            transaction.sign(feePayer, sender);
+    
+            const rawTx = transaction.serialize();
 
-        // Add transfer instruction
-        amount = Math.round(amount * 10 ** this.asset.decimals); // token amount
-        transaction.add(
-            createTransferCheckedInstruction(
-                sourceTokenAccount,
-                tokenMint,
-                destinationTokenAccount,
-                sender.publicKey,
-                amount,
-                this.asset.decimals,
-            ),
-        );
-
-        // Set transaction parameters
-        const { blockhash, lastValidBlockHeight } =
-            await connection.getLatestBlockhash();
-
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = feePayer.publicKey;
-        // Both accounts must sign:
-        // 1. Fee payer signs to pay fees
-        // 2. Sender signs to authorize the transfer
-        transaction.sign(feePayer, sender);
-
-        const rawTx = transaction.serialize();
-        const txId = await connection.sendRawTransaction(rawTx, {
-            skipPreflight: false,
-            preflightCommitment: 'confirmed',
-        });
-
-        // Confirm transaction
-        await connection.confirmTransaction({
-            signature: txId,
-            blockhash,
-            lastValidBlockHeight,
-        });
-
-        // Serialize and return
-        return {
-            rawTransaction: transaction.serialize(),
-            signature: transaction.signature?.toString('base64') || '',
-        };
+            return {
+                rawTransaction: rawTx,
+                signature: transaction.signature?.toString('base64') || '',
+            };    
     }
 }
