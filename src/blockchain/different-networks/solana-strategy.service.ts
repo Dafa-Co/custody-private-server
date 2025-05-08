@@ -10,7 +10,6 @@ import {
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import {
     PrivateServerSignTransactionDto,
-    SignTransactionDto,
 } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import {
@@ -36,7 +35,6 @@ import {
 export class SolanaStrategyService implements IBlockChainPrivateServer {
     private asset: CommonAsset;
     private chain: Chain;
-    private solana: Keypair;
     private host: string;
 
     async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
@@ -52,6 +50,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         const sollanaWallet = Keypair.generate();
         const privateKey = Buffer.from(sollanaWallet.secretKey).toString('base64');
         const address = sollanaWallet.publicKey.toBase58();
+
         return { privateKey, address };
     }
 
@@ -101,7 +100,6 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     ): Promise<SignedSolanaTransaction> {
         const connection = new Connection(this.host, 'confirmed');
         let feePayer = null;
-
         const sender = Keypair.fromSecretKey(
             Uint8Array.from(Buffer.from(privateKey, 'base64')),
         );
@@ -122,15 +120,13 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
                 lamports: Math.floor(amount * LAMPORTS_PER_SOL), // Convert SOL to lamports
             }),
         );
-
         // Get recent blockhash and last valid block height
-        // TODO look at latest block hash expiration
-        const { blockhash, lastValidBlockHeight } =
-            await connection.getLatestBlockhash();
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
 
         transaction.recentBlockhash = blockhash;
         transaction.lastValidBlockHeight = lastValidBlockHeight;
         transaction.feePayer = feePayer ? feePayer.publicKey : sender.publicKey;
+
         // Both accounts must sign:
         if (feePayer) {
             // 1. Fee payer signs to pay fees
@@ -162,7 +158,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
             const feePayer = Keypair.fromSecretKey(
                 Uint8Array.from(Buffer.from(secondPrivateKey, 'base64')),
             );
-            // Token mint address
+            // Token mint address ( contract address )
             const tokenMint = new PublicKey(this.asset.contract_address);
             // Get source token account
             const sourceTokenAccount = await getAssociatedTokenAddress(
@@ -210,8 +206,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
             );
     
             // Set transaction parameters
-            const { blockhash, lastValidBlockHeight } =
-                await connection.getLatestBlockhash();
+            const { blockhash } = await connection.getLatestBlockhash();
     
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = feePayer.publicKey;
