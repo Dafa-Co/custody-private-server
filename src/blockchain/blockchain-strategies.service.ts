@@ -10,6 +10,7 @@ import { TronStrategyService } from './different-networks/tron-strategy.service'
 import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-commons/networks-gategory';
 import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 import { Injectable } from '@nestjs/common';
+import { SolanaStrategyService } from './different-networks/solana-strategy.service';
 
 @Injectable()
 export class BlockchainFactoriesService {
@@ -40,6 +41,11 @@ export class BlockchainFactoriesService {
       case NetworkCategory.Tron:
         strategy = new TronStrategyService();
         break;
+
+      case NetworkCategory.Solana:
+        strategy = new SolanaStrategyService();
+        break;
+  
     }
 
     if (!strategy) {

@@ -17,6 +17,7 @@ export interface IBlockChainPrivateServer {
   getSignedTransaction(
     dto: SignTransactionDto,
     privateKey: string,
+    secondPrivateKey?: string
   ): Promise<CustodySignedTransaction>;
 }
 
