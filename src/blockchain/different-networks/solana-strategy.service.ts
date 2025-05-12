@@ -18,6 +18,7 @@ import {
 } from 'rox-custody_common-modules/libs/entities/asset.entity';
 import { Chain } from 'viem';
 import {
+    Commitment,
     Connection,
     Keypair,
     LAMPORTS_PER_SOL,
@@ -36,6 +37,8 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     private asset: CommonAsset;
     private chain: Chain;
     private host: string;
+    private commitment: Commitment = 'confirmed';
+    private connection: Connection;
 
     async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
         const { asset } = initData;
@@ -44,6 +47,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         this.asset = asset;
         this.chain = networkObject.chain;
         this.host = this.chain.blockExplorers.default.apiUrl;
+        this.connection = new Connection(this.host, this.commitment);
     }
 
     async createWallet(): Promise<IWalletKeys> {
@@ -57,24 +61,32 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     async getSignedTransaction(
         dto: PrivateServerSignTransactionDto,
         privateKey: string,
-        secondPrivateKey: string,
+        secondPrivateKey: string = null,
     ): Promise<CustodySignedTransaction> {
         const { amount, to, transactionId } = dto;
+
         try {
-            const signedTransaction =
-                this.asset.type === AssetType.COIN
-                    ? await this.getSignedTransactionCoin(
-                        privateKey,
-                        to,
-                        amount,
-                        secondPrivateKey,
-                    )
-                    : await this.getSignedTransactionToken(
+            let signedTransaction: SignedSolanaTransaction;
+
+            switch (this.asset.type) {
+                case AssetType.COIN:
+                    signedTransaction = await this.getSignedTransactionCoin(
                         privateKey,
                         to,
                         amount,
                         secondPrivateKey,
                     );
+                    break;
+                case AssetType.TOKEN:
+                    signedTransaction = await this.getSignedTransactionToken(
+                        privateKey,
+                        to,
+                        amount,
+                        secondPrivateKey,
+                    );
+                    break;
+            }
+
 
             return {
                 bundlerUrl: this.host,
@@ -98,17 +110,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         amount: number,
         secondPrivateKey: string,
     ): Promise<SignedSolanaTransaction> {
-        const connection = new Connection(this.host, 'confirmed');
-        let feePayer = null;
-        const sender = Keypair.fromSecretKey(
-            Uint8Array.from(Buffer.from(privateKey, 'base64')),
-        );
-
-        if (secondPrivateKey) {
-            feePayer = Keypair.fromSecretKey(
-                Uint8Array.from(Buffer.from(secondPrivateKey, 'base64')),
-            );
-        }
+        const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
 
         // Recipient public key
         const toPubkey = new PublicKey(to);
@@ -120,8 +122,88 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
                 lamports: Math.floor(amount * LAMPORTS_PER_SOL), // Convert SOL to lamports
             }),
         );
+        
+        return await this.signAndReturnSolanaTransaction(transaction, feePayer, sender);
+    }
+
+    private recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey: string, secondPrivateKey: string) {
+        const sender = Keypair.fromSecretKey(
+            Uint8Array.from(Buffer.from(privateKey, 'base64')),
+        );
+        let feePayer = null;
+
+        if (secondPrivateKey) {
+            feePayer = Keypair.fromSecretKey(
+                Uint8Array.from(Buffer.from(secondPrivateKey, 'base64')),
+            );
+        }
+
+        return {
+            sender,
+            feePayer
+        }
+    }
+
+    async getSignedTransactionToken(
+        privateKey: string,
+        to: string,
+        amount: number,
+        secondPrivateKey: string,
+    ): Promise<SignedSolanaTransaction> {
+            const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
+            // Token mint address ( contract address )
+            const tokenMint = new PublicKey(this.asset.contract_address);
+            // Get source token account
+            const sourceTokenAccount = await getAssociatedTokenAddress(
+                tokenMint,
+                sender.publicKey,
+                false,
+            );
+            // Handle Destination Account
+            const receiverAddress = new PublicKey(to);
+            const receiverTokenAccount = await getAssociatedTokenAddress(
+                tokenMint,
+                receiverAddress,
+                false,
+            );
+            // Check if destination token account exists
+            const destinationAccountInfo = await this.connection.getAccountInfo(
+                receiverTokenAccount,
+            );
+            // Create transaction
+            const transaction = new Transaction();
+    
+            // Add creation instruction if destination account doesn't exist
+            if (!destinationAccountInfo) {
+                transaction.add(
+                    createAssociatedTokenAccountInstruction(
+                        sender.publicKey,
+                        receiverTokenAccount,
+                        receiverAddress,
+                        tokenMint,
+                    ),
+                );
+            }
+    
+            // Add transfer instruction
+            amount = Math.round(amount * 10 ** this.asset.decimals); // token amount
+            transaction.add(
+                createTransferCheckedInstruction(
+                    sourceTokenAccount,
+                    tokenMint,
+                    receiverTokenAccount,
+                    sender.publicKey,
+                    amount,
+                    this.asset.decimals,
+                ),
+            );
+    
+            return await this.signAndReturnSolanaTransaction(transaction, feePayer, sender);  
+    }
+
+    private async signAndReturnSolanaTransaction(transaction: Transaction, feePayer: Keypair | null, sender: Keypair) {
         // Get recent blockhash and last valid block height
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+        const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
 
         transaction.recentBlockhash = blockhash;
         transaction.lastValidBlockHeight = lastValidBlockHeight;
@@ -141,85 +223,6 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         return {
             rawTransaction: rawTx,
             signature: transaction.signature?.toString('base64') || '',
-        };
-    }
-
-    async getSignedTransactionToken(
-        privateKey: string,
-        to: string,
-        amount: number,
-        secondPrivateKey: string,
-    ): Promise<SignedSolanaTransaction> {
-
-            const connection = new Connection(this.host, 'confirmed');
-            const sender = Keypair.fromSecretKey(
-                Uint8Array.from(Buffer.from(privateKey, 'base64')),
-            );
-            const feePayer = Keypair.fromSecretKey(
-                Uint8Array.from(Buffer.from(secondPrivateKey, 'base64')),
-            );
-            // Token mint address ( contract address )
-            const tokenMint = new PublicKey(this.asset.contract_address);
-            // Get source token account
-            const sourceTokenAccount = await getAssociatedTokenAddress(
-                tokenMint,
-                sender.publicKey,
-                false,
-            );
-            // Handle Destination Account
-            const receiverAddress = new PublicKey(to);
-            const destinationTokenAccount = await getAssociatedTokenAddress(
-                tokenMint,
-                receiverAddress,
-                false,
-            );
-            // Check if destination token account exists
-            const destinationAccountInfo = await connection.getAccountInfo(
-                destinationTokenAccount,
-            );
-            // Create transaction
-            const transaction = new Transaction();
-    
-            // Add creation instruction if destination account doesn't exist
-            if (!destinationAccountInfo) {
-                transaction.add(
-                    createAssociatedTokenAccountInstruction(
-                        sender.publicKey,
-                        destinationTokenAccount,
-                        receiverAddress,
-                        tokenMint,
-                    ),
-                );
-            }
-    
-            // Add transfer instruction
-            amount = Math.round(amount * 10 ** this.asset.decimals); // token amount
-            transaction.add(
-                createTransferCheckedInstruction(
-                    sourceTokenAccount,
-                    tokenMint,
-                    destinationTokenAccount,
-                    sender.publicKey,
-                    amount,
-                    this.asset.decimals,
-                ),
-            );
-    
-            // Set transaction parameters
-            const { blockhash } = await connection.getLatestBlockhash();
-    
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = feePayer.publicKey;
-            // Both accounts must sign:
-            // 1. Fee payer signs to pay fees
-            // 2. Sender signs to authorize the transfer
-            transaction.sign(feePayer, sender);
-    
-            const rawTx = transaction.serialize();
-
-            return {
-                rawTransaction: rawTx,
-                signature: transaction.signature?.toString('base64') || '',
-            };    
+        } as SignedSolanaTransaction;
     }
 }
