@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import {
     IBlockChainPrivateServer,
     InitBlockChainPrivateServerStrategies,
@@ -31,6 +31,8 @@ import {
     createAssociatedTokenAccountInstruction,
     createTransferCheckedInstruction,
 } from '@solana/spl-token';
+import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
+import { softJsonStringify } from 'rox-custody_common-modules/libs/utils/soft-json-stringify.utils';
 
 @Injectable()
 export class SolanaStrategyService implements IBlockChainPrivateServer {
@@ -202,6 +204,14 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     }
 
     private async signAndReturnSolanaTransaction(transaction: Transaction, feePayer: Keypair | null, sender: Keypair) {
+        if(!transaction.signature) {
+            const logger = new CustodyLogger();
+
+            logger.notification(`Transaction signature not found for ${softJsonStringify(transaction)}`);
+
+            throw new InternalServerErrorException('Error while getting signature');
+        }
+
         // Get recent blockhash and last valid block height
         const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
 
@@ -222,7 +232,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
 
         return {
             rawTransaction: rawTx,
-            signature: transaction.signature?.toString('base64') || '',
+            signature: transaction.signature?.toString('base64'),
         } as SignedSolanaTransaction;
     }
 }

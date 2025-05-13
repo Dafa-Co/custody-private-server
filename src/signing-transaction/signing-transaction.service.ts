@@ -29,16 +29,8 @@ export class SigningTransactionService {
       corporateId,
     );
 
-    let secondPrivateKey = null;
+    const secondPrivateKey = await this.getSecondPrivateKeyIfExists(secondKeyId, corporateId);
     
-    if(isDefined(secondKeyId)) {
-      secondPrivateKey = await this.keyManagerService.getFullPrivateKey(
-        secondKeyId,
-        '', // gas station doesn't have keyPart
-        corporateId,
-      );
-    }
-
     const blockchainFactory =
       await this.blockchainFactoriesService.getStrategy(asset);
 
@@ -63,5 +55,17 @@ export class SigningTransactionService {
       dto,
       privateKey,
     );
+  }
+
+  private async getSecondPrivateKeyIfExists(secondKeyId: number, corporateId: number): Promise<string | null> {
+    if(isDefined(secondKeyId)) {
+      return await this.keyManagerService.getFullPrivateKey(
+        secondKeyId,
+        '', // gas station doesn't have keyPart
+        corporateId,
+      );
+    }
+
+    return null;
   }
 }
