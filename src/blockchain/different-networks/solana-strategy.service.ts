@@ -39,7 +39,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     private asset: CommonAsset;
     private chain: Chain;
     private host: string;
-    private commitment: Commitment = 'confirmed';
+    private commitment: Commitment = 'finalized';
     private connection: Connection;
 
     async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
