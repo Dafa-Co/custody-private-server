@@ -43,6 +43,7 @@
     "@orbs-network/ton-access": "^2.3.3",
     "@polkadot/api": "^11.0.2",
     "@slack/webhook": "^7.0.4",
+    "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.91.7",
     "@stellar/stellar-sdk": "^11.3.0",
     "@terra-money/terra.js": "^3.1.10",
