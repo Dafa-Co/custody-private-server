@@ -204,14 +204,6 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     }
 
     private async signAndReturnSolanaTransaction(transaction: Transaction, feePayer: Keypair | null, sender: Keypair) {
-        if(!transaction.signature) {
-            const logger = new CustodyLogger();
-
-            logger.notification(`Transaction signature not found for ${softJsonStringify(transaction)}`);
-
-            throw new InternalServerErrorException('Error while getting signature');
-        }
-
         // Get recent blockhash and last valid block height
         const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
 
@@ -226,6 +218,14 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
             transaction.sign(feePayer, sender);
         } else {
             transaction.sign(sender);
+        }
+
+        if(!transaction.signature) {
+            const logger = new CustodyLogger();
+
+            logger.notification(`Transaction signature not found for ${softJsonStringify(transaction)}`);
+
+            throw new InternalServerErrorException('Error while getting signature');
         }
 
         const rawTx = transaction.serialize();
