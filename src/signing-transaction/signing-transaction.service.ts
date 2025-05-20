@@ -8,6 +8,7 @@ import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { SignContractTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { ContractSignerStrategiesService } from 'src/contract-signer/contract-signer-strategies.service';
 import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
+import { isDefined } from 'class-validator';
 
 @Injectable()
 export class SigningTransactionService {
@@ -20,7 +21,7 @@ export class SigningTransactionService {
   async signTransaction(
     dto: PrivateServerSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { asset, keyId, keyPart, corporateId } = dto;
+    const { asset, keyId, keyPart, corporateId, secondKeyId } = dto;
 
     const privateKey = await this.keyManagerService.getFullPrivateKey(
       keyId,
@@ -28,10 +29,12 @@ export class SigningTransactionService {
       corporateId,
     );
 
+    const secondPrivateKey = await this.getSecondPrivateKeyIfExists(secondKeyId, corporateId);
+    
     const blockchainFactory =
       await this.blockchainFactoriesService.getStrategy(asset);
 
-    return await blockchainFactory.getSignedTransaction(dto, privateKey);
+    return await blockchainFactory.getSignedTransaction(dto, privateKey, secondPrivateKey);
   }
 
   async signContractTransaction(
@@ -52,5 +55,17 @@ export class SigningTransactionService {
       dto,
       privateKey,
     );
+  }
+
+  private async getSecondPrivateKeyIfExists(secondKeyId: number, corporateId: number): Promise<string | null> {
+    if(isDefined(secondKeyId)) {
+      return await this.keyManagerService.getFullPrivateKey(
+        secondKeyId,
+        '', // gas station doesn't have keyPart
+        corporateId,
+      );
+    }
+
+    return null;
   }
 }
