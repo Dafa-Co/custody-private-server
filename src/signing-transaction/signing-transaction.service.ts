@@ -16,7 +16,7 @@ export class SigningTransactionService {
     private readonly blockchainFactoriesService: BlockchainFactoriesService,
     private readonly contractSignerFactory: ContractSignerStrategiesService,
     private readonly keyManagerService: KeysManagerService,
-  ) {}
+  ) { }
 
   async signTransaction(
     dto: PrivateServerSignTransactionDto,
@@ -30,7 +30,7 @@ export class SigningTransactionService {
     );
 
     const secondPrivateKey = await this.getSecondPrivateKeyIfExists(secondKeyId, corporateId);
-    
+
     const blockchainFactory =
       await this.blockchainFactoriesService.getStrategy(asset);
 
@@ -58,7 +58,7 @@ export class SigningTransactionService {
   }
 
   private async getSecondPrivateKeyIfExists(secondKeyId: number, corporateId: number): Promise<string | null> {
-    if(isDefined(secondKeyId)) {
+    if (isDefined(secondKeyId)) {
       return await this.keyManagerService.getFullPrivateKey(
         secondKeyId,
         '', // gas station doesn't have keyPart
@@ -67,5 +67,22 @@ export class SigningTransactionService {
     }
 
     return null;
+  }
+
+  async signSwapTransaction(
+    dto: any,
+  ): Promise<CustodySignedTransaction> {
+    const { asset, keyId, keyPart, corporateId } = dto;
+
+    const privateKey = await this.keyManagerService.getFullPrivateKey(
+      keyId,
+      keyPart,
+      corporateId,
+    );
+
+    const blockchainFactory =
+      await this.blockchainFactoriesService.getStrategy(asset);
+
+    return await blockchainFactory.getSignedSwapTransaction(dto, privateKey);
   }
 }
