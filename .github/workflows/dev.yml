@@ -74,6 +74,7 @@ jobs:
             # Run the new container
             docker run -d --restart unless-stopped --name $CONTAINER_NAME \
               -v /root/dev/custody-private-server/.env:/usr/src/app/.env \
+              -v /root/dev/custody-private-server/account-secrets.json:/usr/src/app/account-secrets.json \
               -p 4031:3000 \
               $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
