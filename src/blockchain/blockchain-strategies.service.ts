@@ -11,6 +11,7 @@ import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-co
 import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 import { Injectable } from '@nestjs/common';
 import { SolanaStrategyService } from './different-networks/solana-strategy.service';
+import { XrpStrategyService } from './different-networks/xrp-strategy.service';
 
 @Injectable()
 export class BlockchainFactoriesService {
@@ -45,7 +46,10 @@ export class BlockchainFactoriesService {
       case NetworkCategory.Solana:
         strategy = new SolanaStrategyService();
         break;
-  
+
+      case NetworkCategory.Xrp:
+        strategy = new XrpStrategyService();
+        break;
     }
 
     if (!strategy) {
