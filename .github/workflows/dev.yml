@@ -1,30 +1,79 @@
-name: Deploy to dev server
+
+name: Docker Image CI
+
 on:
   push:
-    branches:
-      - dev
+    branches: [ "dev" ]
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
+
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-    - name: Deploy to dev server
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID2}}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY2}}
+        aws-region: eu-north-1
+
+    - name: Set timestamp for tag
+      run: echo "IMAGE_TAG=$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Clone private rox-custody_common-modules
       env:
-        PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY_2 }}
-        HOST: 49.13.230.22
-        USER: root
-        container_name: custody-priv-server-dev
+        GH_TOKEN: ${{ secrets.ROX_CUSTODY_COMMON_MODULES_TOKENS }}
       run: |
-        echo "$PRIVATE_KEY" > private_key
-        chmod 600 private_key
-         ssh -i private_key   -o StrictHostKeyChecking=no  $USER@$HOST  "
-           cd /root/dev/custody-private-server
-           git pull --recurse-submodules
-           cd rox-custody_common-modules
-           git checkout dev
-           git pull
-           cd ..
-           docker build -t $container_name .
-           docker stop $container_name  && docker rm $container_name
-           docker run -d -p 4031:3000 --name=$container_name  --restart=unless-stopped  $container_name "
+        git clone https://$GH_TOKEN@github.com/Dafa-Co/rox-custody_common-modules.git rox-custody_common-modules
+     
+    - name: Build, Tag, and Push the Image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: custody-private-server-dev
+        IMAGE_TAG: ${{ env.IMAGE_TAG }}
+      run: |
+       docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+       docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+       
+    - name: Deploy to server and run container
+      uses: appleboy/ssh-action@v1.0.0
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: custody-private-server-dev
+        IMAGE_TAG: ${{ env.IMAGE_TAG }}
+        CONTAINER_NAME: custody-private-server-dev  
+      with:
+        host: 49.13.230.22
+        username: root
+        key: ${{ secrets.SSH_PRIVATE_KEY_2 }}
+        envs: ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,CONTAINER_NAME
+        script: |
+          # Stop and remove container if it exists
+          docker stop $CONTAINER_NAME || true
+          docker rm $CONTAINER_NAME || true
+
+            # Delete all images for the repository except the one with the current IMAGE_TAG
+            docker images $ECR_REGISTRY/$ECR_REPOSITORY --format '{{.Tag}} {{.ID}}' | grep -v $IMAGE_TAG | awk '{print $2}' | sort -u | xargs -I {} docker rmi {} --force || true
+            # Prune unused images
+            docker image prune -f
+            
+            # Ensure AWS CLI is configured for ECR login
+            aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
+            
+            # Pull the new image
+            docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+            
+            # Run the new container
+            docker run -d --restart unless-stopped --name $CONTAINER_NAME \
+              -v /root/dev/custody-private-server/.env:/usr/src/app/.env \
+              -p 4031:3000 \
+              $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
