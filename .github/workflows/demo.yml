@@ -1,30 +1,79 @@
-name: Deploy to demo-server 
+name: Docker Image CI
+
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
+
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-    - name: Deploy to demo
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID2}}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY2}}
+        aws-region: eu-north-1
+
+    - name: Set timestamp for tag
+      run: echo "IMAGE_TAG=$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Clone private rox-custody_common-modules
       env:
-        PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY_2}}
-        HOST: 49.13.230.22
-        USER: root
+        GH_TOKEN: ${{ secrets.ROX_CUSTODY_COMMON_MODULES_TOKENS }}
       run: |
-        echo "$PRIVATE_KEY" > private_key 
-        chmod 600 private_key
-         ssh -i private_key   -o StrictHostKeyChecking=no  $USER@$HOST  " 
-         root@ubuntu-32gb-nbg1-1:~/demo/deploy# cat custody-private-server.sh
-         cd /root/demo/custody-private-server
-         git pull --recurse-submodules
-         cd rox-custody_common-modules/
-         git checkout main
-         git pull
-         cd ..
-         docker build -t demo-custody-private-server .
-        docker rm -f demo-custody-private-server
-        docker run -d -p 4024:3000 --name=demo-custody-private-server --log-driver=fluentd --log-opt fluentd-address=localhost:24224 --restart=unless-stopped  demo-custody-private-server "
+        git clone https://$GH_TOKEN@github.com/Dafa-Co/rox-custody_common-modules.git rox-custody_common-modules
+     
+    - name: Build, Tag, and Push the Image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: custody-private-server-demo
+        IMAGE_TAG: ${{ env.IMAGE_TAG }}
+      run: |
+       docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+       docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+       
+    - name: Deploy to server and run container
+      uses: appleboy/ssh-action@v1.0.0
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: custody-private-server-demo
+        IMAGE_TAG: ${{ env.IMAGE_TAG }}
+        CONTAINER_NAME: demo-custody-private-server 
+      with:
+        host: 49.13.230.22
+        username: root
+        key: ${{ secrets.SSH_PRIVATE_KEY_2 }}
+        envs: ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,CONTAINER_NAME
+        script: |
+          # Stop and remove container if it exists
+          docker stop $CONTAINER_NAME || true
+          docker rm $CONTAINER_NAME || true
+
+            # Delete all images for the repository except the one with the current IMAGE_TAG
+            docker images $ECR_REGISTRY/$ECR_REPOSITORY --format '{{.Tag}} {{.ID}}' | grep -v $IMAGE_TAG | awk '{print $2}' | sort -u | xargs -I {} docker rmi {} --force || true
+            # Prune unused images
+            docker image prune -f
+            
+            # Ensure AWS CLI is configured for ECR login
+            aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
+            
+            # Pull the new image
+            docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+            
+            # Run the new container
+            docker run -d --restart unless-stopped --name $CONTAINER_NAME \
+              --log-driver=fluentd --log-opt fluentd-address=localhost:24224 \
+              -v /root/demo/custody-private-server/.env:/usr/src/app/.env \
+               -v /root/demo/custody-private-server/account-secrets.json:/usr/src/app/account-secrets.json\
+              -p 4024:3000 \
+              $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
