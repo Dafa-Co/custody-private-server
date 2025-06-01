@@ -20,7 +20,7 @@ export interface IBlockChainPrivateServer {
     secondPrivateKey?: string
   ): Promise<CustodySignedTransaction>;
   getSignedSwapTransaction(
-    dto: any,
+    dto: SignTransactionDto,
     privateKey: string,
   ): Promise<any>;
 }

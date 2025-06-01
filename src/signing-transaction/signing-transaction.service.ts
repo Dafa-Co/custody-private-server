@@ -70,7 +70,7 @@ export class SigningTransactionService {
   }
 
   async signSwapTransaction(
-    dto: any,
+    dto: PrivateServerSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
     const { asset, keyId, keyPart, corporateId } = dto;
 

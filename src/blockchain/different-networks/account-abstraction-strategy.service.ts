@@ -235,20 +235,20 @@ export class AccountAbstractionStrategyService
 
 
   async getSignedSwapTransaction(
-    dto: any,
+    dto: PrivateServerSignTransactionDto,
     privateKey: string
   ): Promise<any> {
     try {
-      const { keyId, transactionId, txToSign, permit2, finalTransactionData } = dto;
-
+      const { keyId, transactionId, swapTransaction } = dto;
+      const { permit2 } = swapTransaction;
       // Extract transaction parameters
-      const txParams = this.extractTransactionParams(txToSign);
+      const txParams = this.extractTransactionParams(swapTransaction);
 
       // Get nonce and smart account
       const [nonce, smartAccount] = await this.prepareSwapAccountData(keyId, privateKey);
 
       // Handle permit2 signature and prepare final transaction data
-      const finalTxData = await this.prepareTransactionData(txParams.data, permit2, finalTransactionData, privateKey);
+      const finalTxData = await this.prepareTransactionData(txParams.data, permit2, privateKey);
 
       // Build and sign the swap transaction
       const signedTransaction = await this.buildAndSignSwapTransaction(
@@ -294,7 +294,6 @@ export class AccountAbstractionStrategyService
   private async prepareTransactionData(
     data: string,
     permit2: any,
-    finalTransactionData: string,
     privateKey: string
   ): Promise<string> {
     let finalTxData = data;
@@ -305,7 +304,7 @@ export class AccountAbstractionStrategyService
 
       console.log("Appending Permit2 signature to transaction data...");
       finalTxData = this.appendSignatureToTxData(
-        finalTransactionData as `0x${string}`,
+        data as `0x${string}`,
         permit2Signature
       );
     }
@@ -362,7 +361,7 @@ export class AccountAbstractionStrategyService
   }
 
   // Create response object
-  private createSwapTransactionResponse(signedTransaction: SignedTransaction | null, transactionId: string, error: string | null) {
+  private createSwapTransactionResponse(signedTransaction: SignedTransaction | null, transactionId: number, error: string | null) {
     return {
       bundlerUrl: this.bundlerUrl,
       signedTransaction: signedTransaction,
@@ -438,18 +437,6 @@ export class AccountAbstractionStrategyService
       console.log('Error in buildUserOpWithoutPaymaster after retries:', error);
       return null;
     }
-  }
-
-  // Refactored permit2 signature functions
-  private async signPermit2Message(eip712Data: any, privateKey: string): Promise<`0x${string}`> {
-    const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
-
-    // Use the smart account's signer to sign EIP-712 data
-    const signer = smartAccount.getSigner();
-    console.log(JSON.stringify(signer, null, 2));
-
-    // Sign the EIP-712 data using the smart account's signer
-    return await signer.signTypedData(eip712Data);
   }
 
   // Refactored signature appending functions
