@@ -27,7 +27,7 @@ import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/globa
 import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 const abi = require('erc-20-abi');
 import { Web3 } from 'web3';
-import { EvmHelper } from 'rox-custody_common-modules/libs/helpers/evm-helper';
+import { EvmHelper } from 'src/utils/helpers/evm-helper';
 
 @Injectable()
 export class AccountAbstractionStrategyService
@@ -323,7 +323,7 @@ export class AccountAbstractionStrategyService
     const transaction = this.createSwapTransactionObject(txParams, finalTxData);
 
     // Build user operation without paymaster
-    const userOp = await this.buildUserOpForSwap(smartAccount, transaction, nonce, txParams);
+    const userOp = await this.buildUserOpForSwap(smartAccount, transaction, nonce);
 
     if (!userOp) {
       return null;
@@ -347,7 +347,6 @@ export class AccountAbstractionStrategyService
     smartAccount: BiconomySmartAccountV2,
     transaction: Transaction,
     nonce: number,
-    txParams: any
   ): Promise<Partial<UserOperationStruct> | null> {
     return await this.retryBuildUserOpWithoutPaymaster(
       smartAccount,
