@@ -47,10 +47,10 @@ COPY package*.json ./
 RUN npm install --only=production
 
 # Copy the environment file
-COPY .env ./
+#COPY .env ./
 
 # copy the account abstraction secret
-COPY ./account-secrets.json ./
+#COPY ./account-secrets.json ./
 
 # Copy the build artifacts from the builder stage
 COPY --from=builder /usr/src/app/dist ./dist
