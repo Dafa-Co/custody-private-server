@@ -353,10 +353,6 @@ export class AccountAbstractionStrategyService
       smartAccount,
       [transaction],
       nonce,
-      {
-        gasLimit: txParams.gas,
-        gasPrice: txParams.gasPrice,
-      }
     );
   }
 
@@ -375,10 +371,6 @@ export class AccountAbstractionStrategyService
     smartAccount: BiconomySmartAccountV2,
     transactionBody: Transaction[],
     nonce: number,
-    gasOptions: {
-      gasLimit: bigint;
-      gasPrice: bigint;
-    },
     maxRetries: number = 5,
     attempt: number = 0,
   ): Promise<Partial<UserOperationStruct> | null> {
@@ -389,7 +381,6 @@ export class AccountAbstractionStrategyService
         smartAccount,
         transactionBody,
         nonce,
-        gasOptions,
         maxRetries,
         attempt,
         error
@@ -413,10 +404,6 @@ export class AccountAbstractionStrategyService
     smartAccount: BiconomySmartAccountV2,
     transactionBody: Transaction[],
     nonce: number,
-    gasOptions: {
-      gasLimit: bigint;
-      gasPrice: bigint;
-    },
     maxRetries: number,
     attempt: number,
     error: any
@@ -429,7 +416,6 @@ export class AccountAbstractionStrategyService
         smartAccount,
         transactionBody,
         nonce,
-        gasOptions,
         maxRetries,
         attempt + 1,
       );
