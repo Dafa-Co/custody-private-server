@@ -1,4 +1,3 @@
-import { Controller, UseFilters } from '@nestjs/common';
 import { SigningTransactionService } from './signing-transaction.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PrivateServerSignTransactionDto } from '../../rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
@@ -8,7 +7,7 @@ import { SignContractTransactionDto } from 'rox-custody_common-modules/libs/inte
 
 @RmqController()
 export class SigningTransactionRmqController {
-  constructor(private readonly signingService: SigningTransactionService) {}
+  constructor(private readonly signingService: SigningTransactionService) { }
 
   @MessagePattern({ cmd: _MessagePatterns.signTransaction })
   async signTransaction(@Payload() dto: PrivateServerSignTransactionDto) {
@@ -18,5 +17,10 @@ export class SigningTransactionRmqController {
   @MessagePattern({ cmd: _MessagePatterns.signContractTransaction })
   async signContractTransaction(@Payload() dto: SignContractTransactionDto) {
     return this.signingService.signContractTransaction(dto);
+  }
+
+  @MessagePattern({ cmd: _MessagePatterns.signSwapTransaction })
+  async signSwapTransaction(@Payload() dto: PrivateServerSignTransactionDto) {
+    return this.signingService.signSwapTransaction(dto);
   }
 }

@@ -124,7 +124,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
                 lamports: Math.floor(amount * LAMPORTS_PER_SOL), // Convert SOL to lamports
             }),
         );
-        
+
         return await this.signAndReturnSolanaTransaction(transaction, feePayer, sender);
     }
 
@@ -152,55 +152,55 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         amount: number,
         secondPrivateKey: string,
     ): Promise<SignedSolanaTransaction> {
-            const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
-            // Token mint address ( contract address )
-            const tokenMint = new PublicKey(this.asset.contract_address);
-            // Get source token account
-            const sourceTokenAccount = await getAssociatedTokenAddress(
-                tokenMint,
-                sender.publicKey,
-                false,
-            );
-            // Handle Destination Account
-            const receiverAddress = new PublicKey(to);
-            const receiverTokenAccount = await getAssociatedTokenAddress(
-                tokenMint,
-                receiverAddress,
-                false,
-            );
-            // Check if destination token account exists
-            const destinationAccountInfo = await this.connection.getAccountInfo(
-                receiverTokenAccount,
-            );
-            // Create transaction
-            const transaction = new Transaction();
-    
-            // Add creation instruction if destination account doesn't exist
-            if (!destinationAccountInfo) {
-                transaction.add(
-                    createAssociatedTokenAccountInstruction(
-                        sender.publicKey,
-                        receiverTokenAccount,
-                        receiverAddress,
-                        tokenMint,
-                    ),
-                );
-            }
-    
-            // Add transfer instruction
-            amount = Math.round(amount * 10 ** this.asset.decimals); // token amount
+        const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
+        // Token mint address ( contract address )
+        const tokenMint = new PublicKey(this.asset.contract_address);
+        // Get source token account
+        const sourceTokenAccount = await getAssociatedTokenAddress(
+            tokenMint,
+            sender.publicKey,
+            false,
+        );
+        // Handle Destination Account
+        const receiverAddress = new PublicKey(to);
+        const receiverTokenAccount = await getAssociatedTokenAddress(
+            tokenMint,
+            receiverAddress,
+            false,
+        );
+        // Check if destination token account exists
+        const destinationAccountInfo = await this.connection.getAccountInfo(
+            receiverTokenAccount,
+        );
+        // Create transaction
+        const transaction = new Transaction();
+
+        // Add creation instruction if destination account doesn't exist
+        if (!destinationAccountInfo) {
             transaction.add(
-                createTransferCheckedInstruction(
-                    sourceTokenAccount,
-                    tokenMint,
-                    receiverTokenAccount,
+                createAssociatedTokenAccountInstruction(
                     sender.publicKey,
-                    amount,
-                    this.asset.decimals,
+                    receiverTokenAccount,
+                    receiverAddress,
+                    tokenMint,
                 ),
             );
-    
-            return await this.signAndReturnSolanaTransaction(transaction, feePayer, sender);  
+        }
+
+        // Add transfer instruction
+        amount = Math.round(amount * 10 ** this.asset.decimals); // token amount
+        transaction.add(
+            createTransferCheckedInstruction(
+                sourceTokenAccount,
+                tokenMint,
+                receiverTokenAccount,
+                sender.publicKey,
+                amount,
+                this.asset.decimals,
+            ),
+        );
+
+        return await this.signAndReturnSolanaTransaction(transaction, feePayer, sender);
     }
 
     private async signAndReturnSolanaTransaction(transaction: Transaction, feePayer: Keypair | null, sender: Keypair) {
@@ -220,7 +220,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
             transaction.sign(sender);
         }
 
-        if(!transaction.signature) {
+        if (!transaction.signature) {
             const logger = new CustodyLogger();
 
             logger.notification(`Transaction signature not found for ${softJsonStringify(transaction)}`);
@@ -234,5 +234,13 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
             rawTransaction: rawTx,
             signature: transaction.signature?.toString('base64'),
         } as SignedSolanaTransaction;
+    }
+
+    async getSignedSwapTransaction(
+        dto: any,
+        privateKey: string,
+    ): Promise<any> {
+        // Solana does not support swap transactions in the same way as other blockchains.
+        throw new Error('Solana does not support swap transactions.');
     }
 }
