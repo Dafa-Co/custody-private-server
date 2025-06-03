@@ -31,7 +31,7 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
     async createWallet(): Promise<IWalletKeys> {
         const wallet = xrpl.Wallet.generate();
         const privateKey = wallet.seed;  
-        const address = wallet.classicAddress         
+        const address = wallet.classicAddress;         
 
         return { privateKey, address };
     }
