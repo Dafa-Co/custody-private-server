@@ -111,9 +111,12 @@ export class AccountAbstractionStrategyService
 
     const address = await smartAccount.getAccountAddress();
 
+    const { address: eoaAddress } = this.web3.eth.accounts.privateKeyToAccount(privateKey);
+
     return {
       privateKey,
       address,
+      eoaAddress,
     };
   }
 

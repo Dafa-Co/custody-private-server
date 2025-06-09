@@ -3,8 +3,9 @@ import { CustodySignedTransaction } from "../../../rox-custody_common-modules/li
 import { SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
 
 export interface IWalletKeys {
-    privateKey: string;
-    address: string;
+  privateKey: string;
+  address: string;
+  eoaAddress?: string;
 }
 
 export interface InitBlockChainPrivateServerStrategies {
