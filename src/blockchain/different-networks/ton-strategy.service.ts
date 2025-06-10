@@ -5,7 +5,7 @@ import { PrivateServerSignTransactionDto, SignTransactionDto } from "rox-custody
 import { getChainFromNetwork } from "rox-custody_common-modules/blockchain/global-commons/get-network-chain";
 import { AssetType, CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
 import { Chain } from "viem";
-import { internal, MessageRelaxed, toNano, TonClient, WalletContractV4 } from "ton";
+import { internal, MessageRelaxed, OpenedContract, toNano, TonClient, WalletContractV4 } from "ton";
 import { KeyPair, keyPairFromSecretKey, mnemonicNew, mnemonicToPrivateKey } from "ton-crypto";
 import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/custody-logger.service";
 import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-json-stringify.utils";
@@ -103,7 +103,7 @@ export class TonStrategyService implements IBlockChainPrivateServer {
             bounce: false,
         });
 
-        return await this.signAndReturnTonMessage(transfer, seqno, source, feePayer, sender);
+        return await this.signAndReturnTonMessage(transfer, seqno, source, walletContract, feePayer, sender);
     }
 
     private recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey: string, secondPrivateKey: string) {
@@ -120,7 +120,7 @@ export class TonStrategyService implements IBlockChainPrivateServer {
         }
     }
 
-    private async signAndReturnTonMessage(transfer: MessageRelaxed, seqno: number, sourceContract: WalletContractV4, feePayer: KeyPair | null, sender: KeyPair) {
+    private async signAndReturnTonMessage(transfer: MessageRelaxed, seqno: number, sourceContract: WalletContractV4, walletContract: OpenedContract<WalletContractV4>, feePayer: KeyPair | null, sender: KeyPair) {
         try{
             const signedMessage = sourceContract.createTransfer({
                 seqno,
@@ -130,7 +130,8 @@ export class TonStrategyService implements IBlockChainPrivateServer {
             });
 
             return {
-                signedMessage
+                signedMessage,
+                walletContract
             } as SignedTonMessage;
         }catch (error) {
             const logger = new CustodyLogger();
