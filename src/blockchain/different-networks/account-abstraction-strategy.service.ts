@@ -22,7 +22,7 @@ import {
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { secretsTypes, throwOrReturn } from 'account-abstraction.secret';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { PrivateServerSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import { PrivateServerSignSwapTransactionDto, PrivateServerSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 const abi = require('erc-20-abi');
@@ -236,7 +236,7 @@ export class AccountAbstractionStrategyService
 
 
   async getSignedSwapTransaction(
-    dto: PrivateServerSignTransactionDto,
+    dto: PrivateServerSignSwapTransactionDto,
     privateKey: string
   ): Promise<any> {
     try {
