@@ -28,6 +28,7 @@ import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 const abi = require('erc-20-abi');
 import { Web3 } from 'web3';
 import { EvmHelper } from 'src/utils/helpers/evm-helper';
+import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 
 @Injectable()
 export class AccountAbstractionStrategyService
@@ -38,7 +39,10 @@ export class AccountAbstractionStrategyService
   private paymasterUrl: string;
   private web3: Web3;
 
-  constructor(private readonly nonceManager: NonceManagerService) { }
+  constructor(
+    private readonly nonceManager: NonceManagerService,
+    private readonly logger: CustodyLogger
+  ) { }
 
   async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
     const { asset } = initData;
@@ -75,7 +79,7 @@ export class AccountAbstractionStrategyService
       const code = await this.web3.eth.getCode(address);
       return code !== '0x'; // If bytecode is not '0x', contract is deployed
     } catch (error) {
-      console.error('Error checking contract deployment status:', error);
+      this.logger.error('Error checking contract deployment status:', error);
       return true; // Or handle the failure as appropriate
     }
   }
@@ -151,7 +155,7 @@ export class AccountAbstractionStrategyService
 
       return signedTransaction;
     } catch (error) {
-      console.log('Error while building or signing user operations:', error);
+      this.logger.notification('Error while building or signing user operations:', error);
       return null; // Or handle the failure as appropriate
     }
   }
@@ -172,9 +176,6 @@ export class AccountAbstractionStrategyService
       return transaction;
     } catch (error) {
       if (attempt < maxRetries) {
-        console.log(
-          `Retrying buildUserOp... Attempt ${attempt + 1} of ${maxRetries}`,
-        );
         return this.retryBuildUserOp(
           smartAccount,
           transactionBody,
@@ -183,7 +184,7 @@ export class AccountAbstractionStrategyService
           attempt + 1,
         );
       } else {
-        console.log('Error in buildUserOp after retries:', error);
+        this.logger.error('Error in buildUserOp after retries:', error);
         return null; // Return null or throw depending on your error handling strategy
       }
     }
@@ -262,7 +263,7 @@ export class AccountAbstractionStrategyService
       return this.createSwapTransactionResponse(signedTransaction, transactionId, null);
 
     } catch (error) {
-      console.error('Error in getSignedSwapTransaction:', error);
+      this.logger.notification('Error in getSignedSwapTransaction:', error);
       return this.createSwapTransactionResponse(null, dto.transactionId, error.message || 'Unknown error occurred');
     }
   }
@@ -280,7 +281,7 @@ export class AccountAbstractionStrategyService
   }
 
   // Prepare nonce and smart account
-  private async prepareSwapAccountData(keyId: any, privateKey: string): Promise<[number, BiconomySmartAccountV2]> {
+  private async prepareSwapAccountData(keyId: number, privateKey: string): Promise<[number, BiconomySmartAccountV2]> {
     const [nonce] = await Promise.all([
       this.nonceManager.getNonce(keyId, this.asset.networkId),
     ]);
@@ -299,10 +300,8 @@ export class AccountAbstractionStrategyService
     let finalTxData = data;
 
     if (permit2?.eip712) {
-      console.log("Permit2 required, requesting signature...");
       const permit2Signature = await this.signPermit2MessageWithSmartAccount(permit2.eip712, privateKey);
 
-      console.log("Appending Permit2 signature to transaction data...");
       finalTxData = this.appendSignatureToTxData(
         data as `0x${string}`,
         permit2Signature
@@ -408,7 +407,7 @@ export class AccountAbstractionStrategyService
     error: any
   ): Promise<Partial<UserOperationStruct> | null> {
     if (attempt < maxRetries) {
-      console.log(
+      this.logger.error(
         `Retrying buildUserOpWithoutPaymaster... Attempt ${attempt + 1} of ${maxRetries}`,
       );
       return this.retryBuildUserOpWithoutPaymaster(
@@ -419,7 +418,7 @@ export class AccountAbstractionStrategyService
         attempt + 1,
       );
     } else {
-      console.log('Error in buildUserOpWithoutPaymaster after retries:', error);
+      this.logger.error('Error in buildUserOpWithoutPaymaster after retries:', error);
       return null;
     }
   }
@@ -439,14 +438,14 @@ export class AccountAbstractionStrategyService
 
     try {
       // Hash the EIP-712 data first
-      const messageHash = this.hashTypedData(eip712Data);
+      const messageHash = this.callHashTypedData(eip712Data);
       return await smartAccount.signMessage(messageHash);
     } catch (error) {
-      console.error('Error signing with smart account:', error);
+      this.logger.notification('Error signing with smart account:', error);
     }
   }
 
-  private hashTypedData(eip712Data: any): `0x${string}` {
+  private callHashTypedData(eip712Data: any): `0x${string}` {
     const { domain, types, message, primaryType } = eip712Data;
 
     return hashTypedData({
