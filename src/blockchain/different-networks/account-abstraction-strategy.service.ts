@@ -29,6 +29,7 @@ const abi = require('erc-20-abi');
 import { Web3 } from 'web3';
 import { EvmHelper } from 'src/utils/helpers/evm-helper';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
+import { HexString } from 'rox-custody_common-modules/libs/types/hex-string.type';
 
 @Injectable()
 export class AccountAbstractionStrategyService
@@ -123,7 +124,7 @@ export class AccountAbstractionStrategyService
 
   private async buildSignedTransaction(
     smartAccount: BiconomySmartAccountV2,
-    to: `0x${string}`,
+    to: HexString,
     valueSmallUnit: bigint,
     data: string | null,
     nonce: number,
@@ -219,8 +220,8 @@ export class AccountAbstractionStrategyService
     const signedTransaction = await this.buildSignedTransaction(
       smartAccount,
       this.asset.type === AssetType.COIN
-        ? (to as `0x${string}`)
-        : (this.asset.contract_address as `0x${string}`),
+        ? (to as HexString)
+        : (this.asset.contract_address as HexString),
       valueSmallUnit,
       data,
       nonce,
@@ -238,7 +239,7 @@ export class AccountAbstractionStrategyService
   async getSignedSwapTransaction(
     dto: PrivateServerSignSwapTransactionDto,
     privateKey: string
-  ): Promise<any> {
+  ): Promise<CustodySignedTransaction> {
     try {
       const { keyId, transactionId, swapTransaction } = dto;
       const { permit2 } = swapTransaction;
@@ -246,7 +247,7 @@ export class AccountAbstractionStrategyService
       const txParams = this.extractTransactionParams(swapTransaction);
 
       // Get nonce and smart account
-      const [nonce, smartAccount] = await this.prepareSwapAccountData(keyId, privateKey);
+      const { nonce, smartAccount } = await this.prepareSwapAccountData(keyId, privateKey);
 
       // Handle permit2 signature and prepare final transaction data
       const finalTxData = await this.prepareTransactionData(txParams.data, permit2, privateKey);
@@ -272,7 +273,7 @@ export class AccountAbstractionStrategyService
   private extractTransactionParams(txToSign: any) {
     const { to, data, gas, gasPrice, value } = txToSign;
     return {
-      to: to as `0x${string}`,
+      to: to as HexString,
       data,
       gas: BigInt(gas),
       gasPrice: BigInt(gasPrice),
@@ -281,14 +282,17 @@ export class AccountAbstractionStrategyService
   }
 
   // Prepare nonce and smart account
-  private async prepareSwapAccountData(keyId: number, privateKey: string): Promise<[number, BiconomySmartAccountV2]> {
+  private async prepareSwapAccountData(keyId: number, privateKey: string): Promise<{ nonce: number, smartAccount: BiconomySmartAccountV2 }> {
     const [nonce] = await Promise.all([
       this.nonceManager.getNonce(keyId, this.asset.networkId),
     ]);
 
     const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
 
-    return [nonce, smartAccount];
+    return {
+      nonce,
+      smartAccount
+    };
   }
 
   // Handle permit2 signature and prepare final transaction data
@@ -297,18 +301,16 @@ export class AccountAbstractionStrategyService
     permit2: any,
     privateKey: string
   ): Promise<string> {
-    let finalTxData = data;
-
     if (permit2?.eip712) {
       const permit2Signature = await this.signPermit2MessageWithSmartAccount(permit2.eip712, privateKey);
 
-      finalTxData = this.appendSignatureToTxData(
-        data as `0x${string}`,
+      return this.appendSignatureToTxData(
+        data as HexString,
         permit2Signature
       );
     }
 
-    return finalTxData;
+    return data;
   }
 
   // Build and sign the swap transaction
@@ -425,15 +427,15 @@ export class AccountAbstractionStrategyService
 
   // Refactored signature appending functions
   private appendSignatureToTxData(
-    transactionData: `0x${string}`,
-    signature: `0x${string}`
-  ): `0x${string}` {
+    transactionData: HexString,
+    signature: HexString
+  ): HexString {
     const signatureLengthInHex = this.convertSignatureLengthToHex(signature);
     return this.concatenateTransactionDataWithSignature(transactionData, signatureLengthInHex, signature);
   }
 
 
-  private async signPermit2MessageWithSmartAccount(eip712Data: any, privateKey: string): Promise<`0x${string}`> {
+  private async signPermit2MessageWithSmartAccount(eip712Data: any, privateKey: string): Promise<HexString> {
     const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
 
     try {
@@ -445,7 +447,7 @@ export class AccountAbstractionStrategyService
     }
   }
 
-  private callHashTypedData(eip712Data: any): `0x${string}` {
+  private callHashTypedData(eip712Data: any): HexString {
     const { domain, types, message, primaryType } = eip712Data;
 
     return hashTypedData({
@@ -457,7 +459,7 @@ export class AccountAbstractionStrategyService
   }
 
   // Convert signature length to hex
-  private convertSignatureLengthToHex(signature: `0x${string}`): `0x${string}` {
+  private convertSignatureLengthToHex(signature: HexString): HexString {
     return EvmHelper.numberToHex(signature.length / 2 - 1, {
       size: 32,
       signed: false
@@ -466,10 +468,10 @@ export class AccountAbstractionStrategyService
 
   // Concatenate transaction data with signature
   private concatenateTransactionDataWithSignature(
-    transactionData: `0x${string}`,
-    signatureLengthInHex: `0x${string}`,
-    signature: `0x${string}`
-  ): `0x${string}` {
+    transactionData: HexString,
+    signatureLengthInHex: HexString,
+    signature: HexString
+  ): HexString {
     return EvmHelper.concatHex([transactionData, signatureLengthInHex, signature]);
   }
 }
