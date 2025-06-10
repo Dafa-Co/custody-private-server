@@ -12,6 +12,7 @@ import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 import { Injectable } from '@nestjs/common';
 import { SolanaStrategyService } from './different-networks/solana-strategy.service';
 import { XrpStrategyService } from './different-networks/xrp-strategy.service';
+import { TonStrategyService } from './different-networks/ton-strategy.service';
 
 @Injectable()
 export class BlockchainFactoriesService {
@@ -49,6 +50,10 @@ export class BlockchainFactoriesService {
 
       case NetworkCategory.Xrp:
         strategy = new XrpStrategyService();
+        break;
+
+      case NetworkCategory.Ton:
+        strategy = new TonStrategyService();
         break;
     }
 
