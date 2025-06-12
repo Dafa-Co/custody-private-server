@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@biconomy/account": "^4.5.3",
-    "@golevelup/nestjs-rabbitmq": "~5.4.0",
+    "@golevelup/nestjs-rabbitmq": "~5.4.1",
     "@nestjs/class-transformer": "^0.4.0",
     "@nestjs/class-validator": "^0.13.4",
     "@nestjs/common": "^10.3.4",
