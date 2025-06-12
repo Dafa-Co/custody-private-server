@@ -27,7 +27,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
 
   constructor(
   ) {
-    
+
   }
 
   async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
@@ -93,7 +93,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
       to,
       amount * 10 ** this.asset.decimals,
     );
-    
+
     // extend expiration time one hour in SECONDS => 3600 seconds = 1 hour  
     const extendedTransaction = await this.tronWeb.transactionBuilder.extendExpiration(transaction, 3600);
 
@@ -127,5 +127,13 @@ export class TronStrategyService implements IBlockChainPrivateServer {
     // extend expiration time one hour in SECONDS => 3600 seconds = 1 hour  
     const extendedTransaction = await this.tronWeb.transactionBuilder.extendExpiration(transaction.transaction, 3600);
     return await this.tronWeb.trx.sign(extendedTransaction, privateKey);
+  }
+
+  async getSignedSwapTransaction(
+    dto: any,
+    privateKey: string,
+  ): Promise<any> {
+    // Tron does not support swap transactions in the same way as other blockchains.
+    throw new Error('Tron does not support swap transactions.');
   }
 }
