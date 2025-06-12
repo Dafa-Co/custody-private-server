@@ -81,10 +81,10 @@
     "typeorm": "^0.3.20",
     "typeorm-extension": "^3.5.0",
     "uuid": "^11.1.0",
-    "viem": "^2.17.4",
+    "viem": "^2.30.1",
     "web3": "^4.7.0",
     "web3-validator": "^2.0.5",
-    "xrpl": "^3.0.0"
+    "xrpl": "^3.1.0"
   },
   "devDependencies": {
     "@compodoc/compodoc": "^1.1.25",
