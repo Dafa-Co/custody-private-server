@@ -84,7 +84,7 @@ export class TonStrategyService implements IBlockChainPrivateServer {
         }
     }
 
-    async getSignedTransactionCoin(
+    private async getSignedTransactionCoin(
         privateKey: string,
         to: string,
         amount: number,
@@ -94,8 +94,10 @@ export class TonStrategyService implements IBlockChainPrivateServer {
         const source = WalletContractV4.create({
             workchain: 0,
             publicKey: sender.publicKey,
-        }); 
-        const walletContract = this.client.open(source);
+        });
+
+        const testClient = new TonClient({ endpoint: this.host })
+        const walletContract = testClient.open(source);
         const seqno = await walletContract.getSeqno();
         const transfer = internal({
             to,
@@ -103,7 +105,27 @@ export class TonStrategyService implements IBlockChainPrivateServer {
             bounce: false,
         });
 
-        return await this.signAndReturnTonMessage(transfer, seqno, source, walletContract, feePayer, sender);
+        try {
+            const signedMessage = source.createTransfer({
+                seqno,
+                secretKey: sender.secretKey, // used only for nonce generation
+                sendMode: 0,
+                messages: [transfer],
+            });
+            const base64SignedMessage = signedMessage.toBoc().toString('base64');
+            const publicKeyBase64 = sender.publicKey.toString('base64');
+
+            return {
+                base64SignedMessage,
+                publicKeyBase64
+            } as SignedTonMessage;
+        } catch (error) {
+            const logger = new CustodyLogger();
+
+            logger.notification(`Transaction signature not found for ${softJsonStringify(transfer)}`);
+
+            throw new InternalServerErrorException('Error while getting signature');
+        }
     }
 
     private recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey: string, secondPrivateKey: string) {
@@ -118,27 +140,5 @@ export class TonStrategyService implements IBlockChainPrivateServer {
             sender,
             feePayer
         }
-    }
-
-    private async signAndReturnTonMessage(transfer: MessageRelaxed, seqno: number, sourceContract: WalletContractV4, walletContract: OpenedContract<WalletContractV4>, feePayer: KeyPair | null, sender: KeyPair) {
-        try{
-            const signedMessage = sourceContract.createTransfer({
-                seqno,
-                secretKey: sender.secretKey, // used only for nonce generation
-                sendMode: 0,
-                messages: [transfer],
-            });
-
-            return {
-                signedMessage,
-                walletContract
-            } as SignedTonMessage;
-        }catch (error) {
-            const logger = new CustodyLogger();
-
-            logger.notification(`Transaction signature not found for ${softJsonStringify(transfer)}`);
-
-            throw new InternalServerErrorException('Error while getting signature');
-        }    
     }
 }
