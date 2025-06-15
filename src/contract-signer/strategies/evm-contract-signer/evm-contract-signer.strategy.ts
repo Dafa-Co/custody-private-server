@@ -35,12 +35,13 @@ export class EVMContractSignerStrategy implements IContractSignerStrategy {
       privateKey,
     );
 
-    if (!signedTx.rawTransaction) {
+    if (!signedTx.rawTransaction || !signedTx.transactionHash) {
       throw new InternalServerErrorException('Failed to sign transaction');
     }
 
     return {
       signedTransaction: signedTx.rawTransaction,
+      transactionHash: signedTx.transactionHash,
       error: null,
     };
   }
