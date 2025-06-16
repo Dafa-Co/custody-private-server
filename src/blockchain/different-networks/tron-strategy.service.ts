@@ -15,6 +15,7 @@ import { AssetType, CommonAsset } from 'rox-custody_common-modules/libs/entities
 import configs from 'src/configs/configs';
 import { SignedTransaction as SignedTronTransaction } from 'tronweb/src/types/Transaction';
 import { Injectable } from '@nestjs/common';
+import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
 
 const tronHeaders = { 'TRON-PRO-API-KEY': configs.TRON_API_KEY };
 
@@ -26,9 +27,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   private chain: Chain;
 
   constructor(
-  ) {
-
-  }
+  ) { }
 
   async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
     const { asset } = initData;
@@ -87,11 +86,14 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   async getSignedTransactionCoin(
     privateKey: string,
     to: string,
-    amount: number,
+    amount: string,
   ): Promise<SignedTronTransaction> {
     const transaction = await this.tronWeb.transactionBuilder.sendTrx(
       to,
-      amount * 10 ** this.asset.decimals,
+      Number(DecimalsHelper.multiply(
+        amount,
+        DecimalsHelper.pow(10, this.asset.decimals),
+      )),
     );
 
     // extend expiration time one hour in SECONDS => 3600 seconds = 1 hour  
@@ -103,7 +105,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   async getSignedTransactionToken(
     privateKey: string,
     to: string,
-    amount: number,
+    amount: string,
   ): Promise<SignedTronTransaction> {
     const contractMethod: string = 'transfer(address,uint256)';
 
@@ -113,7 +115,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
 
     const contractMethodParams: TronSmartContractMethodParams = [
       { type: 'address', value: to },
-      { type: 'uint256', value: amount * 10 ** this.asset.decimals },
+      { type: 'uint256', value: Number(DecimalsHelper.multiply(amount, DecimalsHelper.pow(10, this.asset.decimals))) },
     ];
 
     const transaction =

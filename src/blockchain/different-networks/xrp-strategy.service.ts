@@ -79,7 +79,7 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
     private async getSignedTransactionCoin(
         privateKey: string,
         to: string,
-        amount: number,
+        amount: string,
     ): Promise<SignedXrpTransaction> {
         const sender = xrpl.Wallet.fromSeed(privateKey);
         

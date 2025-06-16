@@ -9,6 +9,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from 'src/blockchain/interfaces/blockchain.interface';
 import { PrivateServerSignTransactionDto, } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
+import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
 
 
 @Injectable()
@@ -77,14 +78,16 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
     dto: PrivateServerSignTransactionDto,
     privateKey: string,
   ): Promise<CustodySignedTransaction> {
-
     const { amount: bitcoinAmount, to, transactionId } = dto;
 
     try {
-
-
-      const amount = Math.floor(bitcoinAmount * (10 ** this.asset.decimals));
-
+      // const amount = Math.floor(bitcoinAmount * (10 ** this.asset.decimals));
+      const amount = DecimalsHelper.floor(
+        DecimalsHelper.multiply(
+          bitcoinAmount,
+          DecimalsHelper.pow(10, this.asset.decimals),
+        ),
+      )
 
       // Step 1: Reconstruct the key pair from the private key
       const keyPair = this.ECPair.fromWIF(privateKey, this.bitcoinNetwork);
@@ -100,7 +103,7 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
       }
       // Step 4: Create a new Psbt (Partially Signed Bitcoin Transaction)
       const psbt = new Psbt({ network: this.bitcoinNetwork });
-      let inputSum = 0;
+      let inputSum: string = '0';
 
       // Step 5: Add inputs (UTXOs) to the Psbt
       for (const utxo of utxos) {
@@ -110,46 +113,54 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
           index: utxo.vout,
           nonWitnessUtxo: Buffer.from(txHex, 'hex'),
         });
-        inputSum += utxo.value;
+        inputSum = DecimalsHelper.sum(
+          inputSum,
+          utxo.value,
+        );
       }
       // Step 6: Estimate the transaction fee
-      const feeRate = await this.getFeeRate(); // Satoshis per byte (adjust as needed)
+      const feeRate: number = await this.getFeeRate(); // Satoshis per byte (adjust as needed)
       const inputCount = utxos.length;
       let outputCount = 2; // Assuming a change output
       let estimatedTxSize = inputCount * 148 + outputCount * 34 + 10;
-      let fee = feeRate * estimatedTxSize;
+      let fee: string = DecimalsHelper.multiply(feeRate, estimatedTxSize);
 
       // Step 7: Calculate the change amount
-      let change = inputSum - amount - fee;
+      // let change = inputSum - amount - fee;
+      let change = DecimalsHelper.subtract(
+        inputSum,
+        amount,
+        fee,
+      )
       const dustLimit = 546; // Minimum amount for change output
 
-
-      if (change < dustLimit) {
-        // If change is too small, add it to the fee
+      if (DecimalsHelper.isFirstLessThanSecond(change, dustLimit)) {
         fee += change;
-        change = 0;
+        change = '0';
         outputCount = 1; // Only the recipient output
         estimatedTxSize = inputCount * 148 + outputCount * 34 + 10;
-        fee = feeRate * estimatedTxSize;
-        if (inputSum < amount + fee) {
+        fee = DecimalsHelper.multiply(feeRate, estimatedTxSize);
+
+        if (DecimalsHelper.isFirstLessThanSecond(
+          inputSum,
+          DecimalsHelper.sum(amount, fee),
+        )) {
           throw new Error('Insufficient funds after adjusting for dust.');
         }
       }
-
 
       // Step 8: Add outputs to the Psbt
       // Add recipient output
       psbt.addOutput({
         address: to,
-        value: amount,
+        value: Number(amount),
       });
 
-
       // Add change output if applicable
-      if (change > 0) {
+      if (DecimalsHelper.isFirstGreaterThanSecond(change, '0')) {
         psbt.addOutput({
           address: fromAddress,
-          value: change,
+          value: Number(change),
         });
       }
 
@@ -178,21 +189,17 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
         return ecc.verify(msghash, pubkey, signature);
       };
 
-
       const isValid = psbt.validateSignaturesOfAllInputs(validator);
 
       if (!isValid) {
         throw new Error('Signature validation failed.');
       }
 
-
       // Step 12: Finalize the transaction
       psbt.finalizeAllInputs();
 
-
       // Step 13: Extract the raw transaction hex
       const txHex = psbt.extractTransaction().toHex();
-
 
       const signedTransaction: BitcoinTransaction = {
         fees: fee,
