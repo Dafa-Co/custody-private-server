@@ -10,6 +10,7 @@ import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalle
 import { PrivateServerSignTransactionDto, } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
+import Decimal from 'decimal.js';
 
 
 @Injectable()
@@ -103,7 +104,7 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
       }
       // Step 4: Create a new Psbt (Partially Signed Bitcoin Transaction)
       const psbt = new Psbt({ network: this.bitcoinNetwork });
-      let inputSum: string = '0';
+      let inputSum = new Decimal(0);
 
       // Step 5: Add inputs (UTXOs) to the Psbt
       for (const utxo of utxos) {
@@ -123,7 +124,7 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
       const inputCount = utxos.length;
       let outputCount = 2; // Assuming a change output
       let estimatedTxSize = inputCount * 148 + outputCount * 34 + 10;
-      let fee: string = DecimalsHelper.multiply(feeRate, estimatedTxSize);
+      let fee = DecimalsHelper.multiply(feeRate, estimatedTxSize);
 
       // Step 7: Calculate the change amount
       // let change = inputSum - amount - fee;
@@ -135,8 +136,8 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
       const dustLimit = 546; // Minimum amount for change output
 
       if (DecimalsHelper.isFirstLessThanSecond(change, dustLimit)) {
-        fee += change;
-        change = '0';
+        fee = DecimalsHelper.sum(fee, change)
+        change = new Decimal(0)
         outputCount = 1; // Only the recipient output
         estimatedTxSize = inputCount * 148 + outputCount * 34 + 10;
         fee = DecimalsHelper.multiply(feeRate, estimatedTxSize);

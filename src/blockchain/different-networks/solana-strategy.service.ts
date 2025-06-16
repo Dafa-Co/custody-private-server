@@ -34,6 +34,7 @@ import {
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { softJsonStringify } from 'rox-custody_common-modules/libs/utils/soft-json-stringify.utils';
 import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
+import Decimal from 'decimal.js';
 
 @Injectable()
 export class SolanaStrategyService implements IBlockChainPrivateServer {
@@ -110,7 +111,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     async getSignedTransactionCoin(
         privateKey: string,
         to: string,
-        amount: string,
+        amount: Decimal,
         secondPrivateKey: string,
     ): Promise<SignedSolanaTransaction> {
         const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
@@ -124,7 +125,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
                 toPubkey: toPubkey,
                 lamports: BigInt(DecimalsHelper.floor(
                     DecimalsHelper.multiply(amount, LAMPORTS_PER_SOL),
-                )),
+                ).toString()),
             }),
         );
 
@@ -152,7 +153,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     async getSignedTransactionToken(
         privateKey: string,
         to: string,
-        amount: string,
+        amount: Decimal,
         secondPrivateKey: string,
     ): Promise<SignedSolanaTransaction> {
         const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
@@ -203,7 +204,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
                 tokenMint,
                 receiverTokenAccount,
                 sender.publicKey,
-                BigInt(amount),
+                BigInt(amount.toString()),
                 this.asset.decimals,
             ),
         );

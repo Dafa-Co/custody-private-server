@@ -16,6 +16,7 @@ import configs from 'src/configs/configs';
 import { SignedTransaction as SignedTronTransaction } from 'tronweb/src/types/Transaction';
 import { Injectable } from '@nestjs/common';
 import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
+import Decimal from 'decimal.js';
 
 const tronHeaders = { 'TRON-PRO-API-KEY': configs.TRON_API_KEY };
 
@@ -86,7 +87,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   async getSignedTransactionCoin(
     privateKey: string,
     to: string,
-    amount: string,
+    amount: Decimal,
   ): Promise<SignedTronTransaction> {
     const transaction = await this.tronWeb.transactionBuilder.sendTrx(
       to,
@@ -105,7 +106,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   async getSignedTransactionToken(
     privateKey: string,
     to: string,
-    amount: string,
+    amount: Decimal,
   ): Promise<SignedTronTransaction> {
     const contractMethod: string = 'transfer(address,uint256)';
 

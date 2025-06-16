@@ -211,7 +211,7 @@ export class AccountAbstractionStrategyService
     const valueSmallUnit = BigInt(
       DecimalsHelper.floor(
         DecimalsHelper.multiply(amount, 10 ** this.asset.decimals)
-      )
+      ).toString()
     );
 
     let data: string | null = null;

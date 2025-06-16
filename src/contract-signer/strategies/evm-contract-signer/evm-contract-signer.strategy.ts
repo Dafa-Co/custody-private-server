@@ -28,8 +28,8 @@ export class EVMContractSignerStrategy implements IContractSignerStrategy {
     const signedTx = await this.web3.eth.accounts.signTransaction(
       {
         data,
-        gas,
-        gasPrice,
+        gas: BigInt(gas.toString()),
+        gasPrice: BigInt(gasPrice.toString()),
         from: account.address,
       },
       privateKey,
