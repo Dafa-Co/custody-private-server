@@ -1,12 +1,12 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from "../interfaces/blockchain.interface";
 import { CustodySignedTransaction, SignedTonMessage } from "rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type";
-import { PrivateServerSignTransactionDto, SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
+import { PrivateServerSignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
 import { getChainFromNetwork } from "rox-custody_common-modules/blockchain/global-commons/get-network-chain";
 import { AssetType, CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
 import { Chain } from "viem";
-import { internal, MessageRelaxed, OpenedContract, toNano, TonClient, WalletContractV4 } from "ton";
-import { KeyPair, keyPairFromSecretKey, mnemonicNew, mnemonicToPrivateKey } from "ton-crypto";
+import { internal, toNano, TonClient, WalletContractV4 } from "ton";
+import { keyPairFromSecretKey, mnemonicNew, mnemonicToPrivateKey } from "ton-crypto";
 import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/custody-logger.service";
 import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-json-stringify.utils";
 
@@ -98,6 +98,12 @@ export class TonStrategyService implements IBlockChainPrivateServer {
 
         const testClient = new TonClient({ endpoint: this.host })
         const walletContract = testClient.open(source);
+        // ❗ Fetch address and ensure it's included in logs and validated
+        const walletAddress = source.address;
+        const isDeployed = await testClient.isContractDeployed(walletAddress);
+        if (!isDeployed) {
+            throw new Error(`Wallet is not deployed: ${walletAddress}`);
+        }
         const seqno = await walletContract.getSeqno();
         const transfer = internal({
             to,
