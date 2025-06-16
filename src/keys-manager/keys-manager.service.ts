@@ -42,7 +42,7 @@ export class KeysManagerService {
 
     const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset);
     const wallet = await blockchainFactory.createWallet();
-    const { address, privateKey } = wallet;
+    const { address, privateKey, eoaAddress } = wallet;
 
     const encryptedPrivateKey = await this.corporateKey.encryptData(corporateId, privateKey);
 
@@ -60,6 +60,7 @@ export class KeysManagerService {
     return {
       address,
       keyId: SavedPrivateKey.identifiers[0].id,
+      eoaAddress: eoaAddress,
       backupStoragesPart: keysParts.backupStoragesPart,
     };
   }
