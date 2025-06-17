@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from "../interfaces/blockchain.interface";
 import { CustodySignedTransaction, SignedTonMessage } from "rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type";
-import { PrivateServerSignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
+import { PrivateServerSignTransactionDto, SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
 import { getChainFromNetwork } from "rox-custody_common-modules/blockchain/global-commons/get-network-chain";
 import { AssetType, CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
 import { Chain } from "viem";
@@ -13,6 +13,9 @@ import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-js
 
 @Injectable()
 export class TonStrategyService implements IBlockChainPrivateServer {
+    getSignedSwapTransaction(dto: SignTransactionDto, privateKey: string): Promise<CustodySignedTransaction> {
+        throw new Error("Method not implemented.");
+    }
     private asset: CommonAsset;
     private chain: Chain;
     private host: string;
