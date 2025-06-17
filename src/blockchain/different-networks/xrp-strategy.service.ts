@@ -52,9 +52,11 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
                         privateKey,
                         to,
                         amount,
-                        secondPrivateKey,
                     );
                 break;
+
+                default:
+                    throw new InternalServerErrorException('Xrp only supports coins');
             }
 
 
@@ -74,13 +76,12 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
         }
     }
 
-    async getSignedTransactionCoin(
+    private async getSignedTransactionCoin(
         privateKey: string,
         to: string,
         amount: number,
-        secondPrivateKey: string,
     ): Promise<SignedXrpTransaction> {
-        const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
+        const sender = xrpl.Wallet.fromSeed(privateKey);
         
         const transaction: xrpl.Transaction = await this.client.autofill({
             "TransactionType": "Payment",
@@ -89,24 +90,10 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
             "Destination": to,
         });
         
-        return await this.signAndReturnXrpTransaction(transaction, feePayer, sender);
+        return await this.signAndReturnXrpTransaction(transaction, sender);
     }
 
-    private recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey: string, secondPrivateKey: string) {
-        const sender = xrpl.Wallet.fromSeed(privateKey);
-        let feePayer = null;
-
-        if (secondPrivateKey) {
-            feePayer = xrpl.Wallet.fromSeed(secondPrivateKey)
-        }
-
-        return {
-            sender,
-            feePayer
-        }
-    }
-
-    private async signAndReturnXrpTransaction(transaction: xrpl.Transaction, feePayer: xrpl.Wallet | null, sender: xrpl.Wallet) {
+    private async signAndReturnXrpTransaction(transaction: xrpl.Transaction, sender: xrpl.Wallet) {
         // Sign prepared instructions ------------------------------------------------
         const signedTransaction = sender.sign(transaction);
 
@@ -124,4 +111,7 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
         } as SignedXrpTransaction;
     }
 
+    getSignedSwapTransaction(dto: SignTransactionDto, privateKey: string): Promise<CustodySignedTransaction> {
+        throw new Error("Method not implemented.");
+    }
 }
