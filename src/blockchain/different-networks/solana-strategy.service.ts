@@ -179,7 +179,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         if (!destinationAccountInfo) {
             transaction.add(
                 createAssociatedTokenAccountInstruction(
-                    feePayer.publicKey,
+                    feePayer ? feePayer.publicKey : sender.publicKey,
                     receiverTokenAccount,
                     receiverAddress,
                     tokenMint,
