@@ -8,6 +8,7 @@ import { Chain } from "viem";
 import * as xrpl from "xrpl";
 import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/custody-logger.service";
 import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-json-stringify.utils";
+import Decimal from "decimal.js";
 
 @Injectable()
 export class XrpStrategyService implements IBlockChainPrivateServer {
@@ -79,14 +80,14 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
     private async getSignedTransactionCoin(
         privateKey: string,
         to: string,
-        amount: number,
+        amount: Decimal,
     ): Promise<SignedXrpTransaction> {
         const sender = xrpl.Wallet.fromSeed(privateKey);
         
         const transaction: xrpl.Transaction = await this.client.autofill({
             "TransactionType": "Payment",
             "Account": sender.classicAddress,
-            "Amount": xrpl.xrpToDrops(amount), // Convert XRP to drops
+            "Amount": xrpl.xrpToDrops(amount.toString()), // Convert XRP to drops
             "Destination": to,
         });
         
