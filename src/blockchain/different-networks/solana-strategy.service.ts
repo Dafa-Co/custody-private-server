@@ -33,6 +33,8 @@ import {
 } from '@solana/spl-token';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { softJsonStringify } from 'rox-custody_common-modules/libs/utils/soft-json-stringify.utils';
+import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
+import Decimal from 'decimal.js';
 
 @Injectable()
 export class SolanaStrategyService implements IBlockChainPrivateServer {
@@ -109,7 +111,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     async getSignedTransactionCoin(
         privateKey: string,
         to: string,
-        amount: number,
+        amount: Decimal,
         secondPrivateKey: string,
     ): Promise<SignedSolanaTransaction> {
         const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
@@ -121,7 +123,9 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
             SystemProgram.transfer({
                 fromPubkey: sender.publicKey,
                 toPubkey: toPubkey,
-                lamports: Math.floor(amount * LAMPORTS_PER_SOL), // Convert SOL to lamports
+                lamports: BigInt(DecimalsHelper.floor(
+                    DecimalsHelper.multiply(amount, LAMPORTS_PER_SOL),
+                ).toString()),
             }),
         );
 
@@ -149,7 +153,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     async getSignedTransactionToken(
         privateKey: string,
         to: string,
-        amount: number,
+        amount: Decimal,
         secondPrivateKey: string,
     ): Promise<SignedSolanaTransaction> {
         const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
@@ -188,14 +192,19 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         }
 
         // Add transfer instruction
-        amount = Math.round(amount * 10 ** this.asset.decimals); // token amount
+        amount = DecimalsHelper.floor(
+            DecimalsHelper.multiply(
+                amount,
+                DecimalsHelper.pow(10, this.asset.decimals),
+            ),
+        );
         transaction.add(
             createTransferCheckedInstruction(
                 sourceTokenAccount,
                 tokenMint,
                 receiverTokenAccount,
                 sender.publicKey,
-                amount,
+                BigInt(amount.toString()),
                 this.asset.decimals,
             ),
         );
