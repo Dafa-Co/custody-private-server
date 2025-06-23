@@ -9,6 +9,7 @@ import * as xrpl from "xrpl";
 import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/custody-logger.service";
 import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-json-stringify.utils";
 import Decimal from "decimal.js";
+import BigNumber from 'bignumber.js'
 
 @Injectable()
 export class XrpStrategyService implements IBlockChainPrivateServer {
@@ -87,7 +88,7 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
         const transaction: xrpl.Transaction = await this.client.autofill({
             "TransactionType": "Payment",
             "Account": sender.classicAddress,
-            "Amount": xrpl.xrpToDrops(amount.toString()), // Convert XRP to drops
+            "Amount": xrpl.xrpToDrops(new BigNumber(amount.toJSON())), // Convert XRP to drops
             "Destination": to,
         });
         
