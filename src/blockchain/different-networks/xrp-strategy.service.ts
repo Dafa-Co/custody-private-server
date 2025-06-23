@@ -84,11 +84,13 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
         amount: Decimal,
     ): Promise<SignedXrpTransaction> {
         const sender = xrpl.Wallet.fromSeed(privateKey);
+
+        const decimalAmount = new Decimal(amount);
         
         const transaction: xrpl.Transaction = await this.client.autofill({
             "TransactionType": "Payment",
             "Account": sender.classicAddress,
-            "Amount": xrpl.xrpToDrops(new BigNumber(amount.toJSON())), // Convert XRP to drops
+            "Amount": xrpl.xrpToDrops(new BigNumber(decimalAmount.toJSON())), // Convert XRP to drops
             "Destination": to,
         });
         
