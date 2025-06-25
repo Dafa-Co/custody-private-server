@@ -5,10 +5,12 @@ import { PrivateServerSignTransactionDto, SignTransactionDto } from "rox-custody
 import { getChainFromNetwork } from "rox-custody_common-modules/blockchain/global-commons/get-network-chain";
 import { AssetType, CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
 import { Chain } from "viem";
-import { internal, toNano, TonClient, WalletContractV4 } from "ton";
-import { keyPairFromSecretKey, mnemonicNew, mnemonicToPrivateKey } from "ton-crypto";
+import { internal, SendMode, toNano, TonClient, WalletContractV4 } from "ton";
+import { keyPairFromSecretKey, mnemonicNew, mnemonicToPrivateKey, sign } from "ton-crypto";
 import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/custody-logger.service";
 import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-json-stringify.utils";
+import Decimal from "decimal.js";
+import BigNumber from 'bignumber.js'
 
 
 @Injectable()
@@ -90,7 +92,7 @@ export class TonStrategyService implements IBlockChainPrivateServer {
     private async getSignedTransactionCoin(
         privateKey: string,
         to: string,
-        amount: number,
+        amount: Decimal,
         secondPrivateKey: string,
     ): Promise<SignedTonMessage> {
         const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
@@ -98,35 +100,34 @@ export class TonStrategyService implements IBlockChainPrivateServer {
             workchain: 0,
             publicKey: sender.publicKey,
         });
-
+        const decimalAmount = new Decimal(amount);
         const testClient = new TonClient({ endpoint: this.host })
         const walletContract = testClient.open(source);
-        // ❗ Fetch address and ensure it's included in logs and validated
-        const walletAddress = source.address;
-        const isDeployed = await testClient.isContractDeployed(walletAddress);
-        if (!isDeployed) {
-            throw new Error(`Wallet is not deployed: ${walletAddress}`);
-        }
         const seqno = await walletContract.getSeqno();
         const transfer = internal({
             to,
-            value: toNano(amount),
+            value: toNano(BigInt(decimalAmount.toString())),
             bounce: false,
         });
 
         try {
-            const signedMessage = source.createTransfer({
+            // Step 1: Create unsigned message
+            const unsigned = source.createTransfer({
                 seqno,
-                secretKey: sender.secretKey, // used only for nonce generation
-                sendMode: 0,
+                secretKey: sender.secretKey,
+                sendMode: SendMode.PAY_GAS_SEPARATELY | SendMode.IGNORE_ERRORS,
                 messages: [transfer],
             });
-            const base64SignedMessage = signedMessage.toBoc().toString('base64');
+    
+            // Step 2: Sign it manually
+            sign(unsigned.hash(), sender.secretKey);
+    
+            const base64SignedMessage = unsigned.toBoc().toString('base64');
             const publicKeyBase64 = sender.publicKey.toString('base64');
-
+    
             return {
                 base64SignedMessage,
-                publicKeyBase64
+                publicKeyBase64,
             } as SignedTonMessage;
         } catch (error) {
             const logger = new CustodyLogger();
