@@ -215,7 +215,7 @@ export class AccountAbstractionStrategyService
     );
 
     let data: string | null = null;
-    if (this.asset.type === AssetType.TOKEN) {
+    if (this.asset.type === AssetType.TOKEN || this.asset.type === AssetType.CUSTOM_TOKEN) {
       data = encodeFunctionData({
         abi: abi,
         functionName: 'transfer',
