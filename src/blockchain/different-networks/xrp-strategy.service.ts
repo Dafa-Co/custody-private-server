@@ -87,7 +87,7 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
         const transaction: xrpl.Transaction = await this.client.autofill({
             "TransactionType": "Payment",
             "Account": sender.classicAddress,
-            "Amount": xrpl.xrpToDrops(amount.toString()), // Convert XRP to drops
+            "Amount": amount.toString(),
             "Destination": to,
         });
         

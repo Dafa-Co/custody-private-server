@@ -21,7 +21,6 @@ import {
     Commitment,
     Connection,
     Keypair,
-    LAMPORTS_PER_SOL,
     PublicKey,
     SystemProgram,
     Transaction,
@@ -33,7 +32,6 @@ import {
 } from '@solana/spl-token';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { softJsonStringify } from 'rox-custody_common-modules/libs/utils/soft-json-stringify.utils';
-import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
 import Decimal from 'decimal.js';
 
 @Injectable()
@@ -123,9 +121,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
             SystemProgram.transfer({
                 fromPubkey: sender.publicKey,
                 toPubkey: toPubkey,
-                lamports: BigInt(DecimalsHelper.floor(
-                    DecimalsHelper.multiply(amount, LAMPORTS_PER_SOL),
-                ).toString()),
+                lamports: BigInt(amount.toString()),
             }),
         );
 
@@ -192,12 +188,6 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         }
 
         // Add transfer instruction
-        amount = DecimalsHelper.floor(
-            DecimalsHelper.multiply(
-                amount,
-                DecimalsHelper.pow(10, this.asset.decimals),
-            ),
-        );
         transaction.add(
             createTransferCheckedInstruction(
                 sourceTokenAccount,
