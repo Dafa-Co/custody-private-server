@@ -91,10 +91,10 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   ): Promise<SignedTronTransaction> {
     const transaction = await this.tronWeb.transactionBuilder.sendTrx(
       to,
-      Number(DecimalsHelper.multiply(
+      DecimalsHelper.multiply(
         amount,
-        DecimalsHelper.pow(10, this.asset.decimals),
-      )),
+        DecimalsHelper.pow(10, this.asset.decimals)
+      ).toString() as unknown as number,
     );
 
     // extend expiration time one hour in SECONDS => 3600 seconds = 1 hour  
@@ -115,8 +115,18 @@ export class TronStrategyService implements IBlockChainPrivateServer {
     };
 
     const contractMethodParams: TronSmartContractMethodParams = [
-      { type: 'address', value: to },
-      { type: 'uint256', value: Number(DecimalsHelper.multiply(amount, DecimalsHelper.pow(10, this.asset.decimals))) },
+      {
+        type: 'address',
+        value: to
+      },
+      {
+        type: 'uint256',
+        value:
+          DecimalsHelper.multiply(
+            amount,
+            DecimalsHelper.pow(10, this.asset.decimals)
+          ).toString()
+      },
     ];
 
     const transaction =
