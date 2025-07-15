@@ -79,17 +79,9 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
     dto: PrivateServerSignTransactionDto,
     privateKey: string,
   ): Promise<CustodySignedTransaction> {
-    const { amount: bitcoinAmount, to, transactionId } = dto;
+    const { amount, to, transactionId } = dto;
 
     try {
-      // const amount = Math.floor(bitcoinAmount * (10 ** this.asset.decimals));
-      const amount = DecimalsHelper.floor(
-        DecimalsHelper.multiply(
-          bitcoinAmount,
-          DecimalsHelper.pow(10, this.asset.decimals),
-        ),
-      )
-
       // Step 1: Reconstruct the key pair from the private key
       const keyPair = this.ECPair.fromWIF(privateKey, this.bitcoinNetwork);
       // Step 2: Derive the sender's address (fromAddress)
