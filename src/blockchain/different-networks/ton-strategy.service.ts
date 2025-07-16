@@ -10,7 +10,8 @@ import { keyPairFromSecretKey, mnemonicNew, mnemonicToPrivateKey, sign } from "t
 import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/custody-logger.service";
 import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-json-stringify.utils";
 import Decimal from "decimal.js";
-import BigNumber from 'bignumber.js'
+import { v4 as uuidv4 } from 'uuid';
+import { DecimalsHelper } from "rox-custody_common-modules/libs/utils/decimals-helper";
 
 
 @Injectable()
@@ -100,15 +101,17 @@ export class TonStrategyService implements IBlockChainPrivateServer {
             workchain: 0,
             publicKey: sender.publicKey,
         });
-        const decimalAmount = new Decimal(amount);
         const testClient = new TonClient({ endpoint: this.host })
         const walletContract = testClient.open(source);
         const seqno = await walletContract.getSeqno();
+        const nanoAmount = DecimalsHelper.divide(amount, 10 ** this.chain.nativeCurrency.decimals);
+        const transactionIdentifier = uuidv4().replace(/-/g, '').substring(0, 55);
         const transfer = internal({
             to,
-            value: toNano(BigInt(decimalAmount.toString())),
+            value: nanoAmount.toString(),
             bounce: false,
-        });
+            body: transactionIdentifier,
+        });        
 
         try {
             // Step 1: Create unsigned message
@@ -128,6 +131,7 @@ export class TonStrategyService implements IBlockChainPrivateServer {
             return {
                 base64SignedMessage,
                 publicKeyBase64,
+                transactionIdentifier
             } as SignedTonMessage;
         } catch (error) {
             const logger = new CustodyLogger();
