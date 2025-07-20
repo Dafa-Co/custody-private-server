@@ -63,17 +63,13 @@ export class KeysManagerService {
         .where('idempotent.idempotentKey = :idempotentKey', { idempotentKey })
         .getOne();
 
-      console.log('lockedRow', lockedRow);
-
       if (isDefined(lockedRow.keyId))
         return {
           address: lockedRow.address,
           keyId: lockedRow.keyId,
-          eoaAddress: lockedRow.address,
+          eoaAddress: lockedRow.eoaAddress,
           alreadyGenerated: true,
         };
-
-      console.log('creating key');
 
       const blockchainFactory =
         await this.blockchainFactoriesService.getStrategy(asset);
@@ -102,6 +98,7 @@ export class KeysManagerService {
         .set({
           keyId: savedPrivateKey.identifiers[0].id,
           address,
+          eoaAddress,
         })
         .where('idempotentKey = :idempotentKey', { idempotentKey })
         .execute();
