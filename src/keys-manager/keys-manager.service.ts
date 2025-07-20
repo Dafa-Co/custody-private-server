@@ -8,6 +8,7 @@ import { CorporatePrivateKeysService } from './corporate-private-keys.service';
 import { IGenerateKeyPairResponse } from 'rox-custody_common-modules/libs/interfaces/generate-ket-pair.interface';
 import { IdempotentKeyEntity } from './entities/idempotent-key.entity';
 import { isDefined } from 'class-validator';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class KeysManagerService {
@@ -42,8 +43,10 @@ export class KeysManagerService {
       asset,
       corporateId,
       apiApprovalEssential: { percentageToStoreInCustody },
-      idempotentKey,
+      idempotentKey: idk,
     } = dto;
+
+    const idempotentKey = idk ?? uuidv4();
 
     await this.idempotentKeyRepository
       .createQueryBuilder()
