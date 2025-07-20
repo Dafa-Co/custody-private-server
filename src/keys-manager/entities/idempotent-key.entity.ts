@@ -17,6 +17,9 @@ export class IdempotentKeyEntity {
   @Column({ type: 'varchar', nullable: true })
   address?: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  eoaAddress?: string;
+
   @Exclude()
   @CreateDateColumn({ 
     default: () => 'CURRENT_TIMESTAMP(6)',
