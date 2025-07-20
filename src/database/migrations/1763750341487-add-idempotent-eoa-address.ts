@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class AddIdempotentKey1751890341618 implements MigrationInterface {
-    name = 'AddIdempotentKey1751890341618'
+export class AddIdempotentEOAAddress1763750341487 implements MigrationInterface {
+    name = 'AddIdempotentEOAAddress1763750341487'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE \`idempotent_key_entity\` ADD \`eoaAddress\` varchar(255) NULL`);
