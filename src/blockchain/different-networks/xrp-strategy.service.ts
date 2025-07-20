@@ -26,14 +26,14 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
         this.chain = networkObject.chain;
         this.host = this.chain.blockExplorers.default.apiUrl;
         this.client = new xrpl.Client(this.host);
-        
+
         await this.client.connect();
     }
 
     async createWallet(): Promise<IWalletKeys> {
         const wallet = xrpl.Wallet.generate();
-        const privateKey = wallet.seed;  
-        const address = wallet.classicAddress;         
+        const privateKey = wallet.seed;
+        const address = wallet.classicAddress;
 
         return { privateKey, address };
     }
@@ -55,7 +55,7 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
                         to,
                         amount,
                     );
-                break;
+                    break;
 
                 default:
                     throw new InternalServerErrorException('Xrp only supports coins');
@@ -84,16 +84,15 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
         amount: Decimal,
     ): Promise<SignedXrpTransaction> {
         const sender = xrpl.Wallet.fromSeed(privateKey);
-
         const decimalAmount = new Decimal(amount);
-        
+
         const transaction: xrpl.Transaction = await this.client.autofill({
             "TransactionType": "Payment",
             "Account": sender.classicAddress,
-            "Amount": xrpl.xrpToDrops(new BigNumber(decimalAmount.toJSON())), // Convert XRP to drops
+            "Amount": (new BigNumber(decimalAmount.toJSON())).toString(), // Convert XRP to drops
             "Destination": to,
         });
-        
+
         return await this.signAndReturnXrpTransaction(transaction, sender);
     }
 
@@ -101,7 +100,7 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
         // Sign prepared instructions ------------------------------------------------
         const signedTransaction = sender.sign(transaction);
 
-        if(!signedTransaction.hash) {
+        if (!signedTransaction.hash) {
             const logger = new CustodyLogger();
 
             logger.notification(`Transaction signature not found for ${softJsonStringify(transaction)}`);

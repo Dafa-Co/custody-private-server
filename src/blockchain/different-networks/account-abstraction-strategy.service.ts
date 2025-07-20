@@ -30,7 +30,6 @@ import { Web3 } from 'web3';
 import { EvmHelper } from 'src/utils/helpers/evm-helper';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { HexString } from 'rox-custody_common-modules/libs/types/hex-string.type';
-import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
 
 @Injectable()
 export class AccountAbstractionStrategyService
@@ -208,11 +207,7 @@ export class AccountAbstractionStrategyService
 
     const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
 
-    const valueSmallUnit = BigInt(
-      DecimalsHelper.floor(
-        DecimalsHelper.multiply(amount, 10 ** this.asset.decimals)
-      ).toString()
-    );
+    const valueSmallUnit = BigInt(amount.toString());
 
     let data: string | null = null;
     if (this.asset.type === AssetType.TOKEN || this.asset.type === AssetType.CUSTOM_TOKEN) {
