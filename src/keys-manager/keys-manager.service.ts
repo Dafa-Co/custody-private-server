@@ -1,21 +1,25 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { PrivateKeys } from './entities/private-key.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { BlockchainFactoriesService } from 'src/blockchain/blockchain-strategies.service';
 import { GenerateKeyPairBridge } from 'rox-custody_common-modules/libs/interfaces/generate-key.interface';
 import { CorporatePrivateKeysService } from './corporate-private-keys.service';
 import { IGenerateKeyPairResponse } from 'rox-custody_common-modules/libs/interfaces/generate-ket-pair.interface';
+import { IdempotentKeyEntity } from './entities/idempotent-key.entity';
+import { isDefined } from 'class-validator';
 
 @Injectable()
 export class KeysManagerService {
   constructor(
     @InjectRepository(PrivateKeys)
     private privateKeyRepository: Repository<PrivateKeys>,
+    @InjectRepository(IdempotentKeyEntity)
+    private readonly idempotentKeyRepository: Repository<IdempotentKeyEntity>,
     private readonly blockchainFactoriesService: BlockchainFactoriesService,
-    private corporateKey: CorporatePrivateKeysService
-  ) {
-  }
+    private corporateKey: CorporatePrivateKeysService,
+    @InjectDataSource() private readonly dataSource: DataSource,
+  ) {}
 
   private getKeysParts(
     percentageToStoreInCustody: number,
@@ -38,31 +42,77 @@ export class KeysManagerService {
       asset,
       corporateId,
       apiApprovalEssential: { percentageToStoreInCustody },
+      idempotentKey,
     } = dto;
 
-    const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset);
-    const wallet = await blockchainFactory.createWallet();
-    const { address, privateKey, eoaAddress } = wallet;
+    await this.idempotentKeyRepository
+      .createQueryBuilder()
+      .insert()
+      .values({
+        idempotentKey,
+      })
+      .orUpdate(['idempotentKey'])
+      .execute();
+
+    return this.dataSource.transaction(async (manager) => {
+      // lock the row with FOR UPDATE
+      const lockedRow = await manager
+        .getRepository(IdempotentKeyEntity)
+        .createQueryBuilder('idempotent')
+        .setLock('pessimistic_write')
+        .where('idempotent.idempotentKey = :idempotentKey', { idempotentKey })
+        .getOne();
+
+      console.log('lockedRow', lockedRow);
+
+      if (isDefined(lockedRow.keyId))
+        return {
+          address: lockedRow.address,
+          keyId: lockedRow.keyId,
+          eoaAddress: lockedRow.address,
+          alreadyGenerated: true,
+        };
+
+      console.log('creating key');
+
+      const blockchainFactory =
+        await this.blockchainFactoriesService.getStrategy(asset);
+      const wallet = await blockchainFactory.createWallet();
+      const { address, privateKey, eoaAddress } = wallet;
 
     const encryptedPrivateKey = await this.corporateKey.encryptData(corporateId, privateKey);
 
-    const keysParts = this.getKeysParts(
-      percentageToStoreInCustody,
-      encryptedPrivateKey,
-    );
+      const keysParts = this.getKeysParts(
+        percentageToStoreInCustody,
+        encryptedPrivateKey,
+      );
 
-    const SavedPrivateKey = await this.privateKeyRepository.insert(
-      this.privateKeyRepository.create({
-        private_key: keysParts.custodyPart,
-      })
-    );
+      const savedPrivateKey = await manager.getRepository(PrivateKeys)
+        .createQueryBuilder('private_key')
+        .insert()
+        .values({
+          private_key: keysParts.custodyPart,
+        })
+        .execute();
 
-    return {
-      address,
-      keyId: SavedPrivateKey.identifiers[0].id,
-      eoaAddress: eoaAddress,
-      backupStoragesPart: keysParts.backupStoragesPart,
-    };
+      await manager
+        .getRepository(IdempotentKeyEntity)
+        .createQueryBuilder()
+        .update()
+        .set({
+          keyId: savedPrivateKey.identifiers[0].id,
+          address,
+        })
+        .where('idempotentKey = :idempotentKey', { idempotentKey })
+        .execute();
+
+      return {
+        address,
+        keyId: savedPrivateKey.identifiers[0].id,
+        eoaAddress,
+        backupStoragesPart: keysParts.backupStoragesPart,
+      };
+    });
   }
 
   async getFullPrivateKey(keyId: number, keyPart: string, corporateId: number): Promise<string> {
