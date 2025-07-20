@@ -12,7 +12,7 @@ export class KeysManagerRmqController {
 
   @MessagePattern({ cmd: _MessagePatterns.generateKey })
   async generateKey(@Payload() dto: GenerateKeyPairBridge) {
-    return this.keysManagerService.generateKeyPair(dto);
+    return await this.keysManagerService.generateKeyPair(dto);
   }
 
   @EventPattern({ cmd: _EventPatterns.rollbackKeyGeneration })
