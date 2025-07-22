@@ -2,24 +2,31 @@ import { join } from 'path';
 import * as fs from 'fs';
 import { InternalServerErrorException } from '@nestjs/common';
 import { supportedNetworks } from 'rox-custody_common-modules/blockchain/global-commons/supported-networks.enum';
+import { isDefined } from 'class-validator';
 
 const keysPath = join(process.cwd(), 'account-secrets.json'); // Adjust the path as needed
 const keysData = JSON.parse(fs.readFileSync(keysPath, 'utf8'));
 
 interface accountAbstractionSecrets {
-  bundler: {
+  v2Bundler: {
     mainnet: string;
     testnet: string;
   };
-  paymaster: {
+  v3Bundler: {
+    [network: string]: string;
+  };
+  v1Paymaster: {
+    [network: string]: string;
+  };
+  v2Paymaster: {
     [network: string]: string;
   };
 }
 
-const returnSecret = (type: secretsTypes, key: string, throwIfNotFound: boolean = false) => {
+const returnSecret = (type: secretsTypes, key: string) => {
   const secret = keysData[type][key];
 
-  if(!secret && throwIfNotFound) {
+  if(!isDefined(secret) || secret === '') {
     throw new InternalServerErrorException(`Secret not found for ${type} and key ${key}`);
   }
 
@@ -27,34 +34,40 @@ const returnSecret = (type: secretsTypes, key: string, throwIfNotFound: boolean 
 };
 
 export enum secretsTypes {
-  bundler = 'bundler',
-  paymaster = 'paymaster',
+  v2Bundler = 'v2Bundler',
+  v3Bundler = 'v3Bundler',
+  v1Paymaster = 'v1Paymaster',
+  v2Paymaster = 'v2Paymaster',
 }
 
 export const ACCOUNT_ABSTRACTION_SECRETS: accountAbstractionSecrets = {
-  bundler: {
-    mainnet: returnSecret(secretsTypes.bundler, 'mainnet', true),
-    testnet: returnSecret(secretsTypes.bundler, 'testnet', true),
+  v2Bundler: {
+    mainnet: returnSecret(secretsTypes.v2Bundler, 'mainnet'),
+    testnet: returnSecret(secretsTypes.v2Bundler, 'testnet'),
   },
-  paymaster: {},
-};
-
-export const throwOrReturn = (type: secretsTypes, key: string) => {
-  if (!ACCOUNT_ABSTRACTION_SECRETS[type][key]) {
-    const error = `Secret not found for ${type} and key ${key}`;
-    throw new InternalServerErrorException(error);
-  }
-
-  return ACCOUNT_ABSTRACTION_SECRETS[type][key];
+  v3Bundler: {},
+  v1Paymaster: {},
+  v2Paymaster: {},
 };
 
 const supportedNetworkValues = Object.values(supportedNetworks).filter(
   (value) => typeof value === 'number',
 );
 
-for (const value of supportedNetworkValues) {
-  ACCOUNT_ABSTRACTION_SECRETS.paymaster[value] = returnSecret(
-    secretsTypes.paymaster,
-    value.toString(),
-  );
+const fillAccountAbstractionSecrets = (type: secretsTypes) => {
+  for (const value of supportedNetworkValues) {
+    ACCOUNT_ABSTRACTION_SECRETS[type][value] = returnSecret(type, value.toString());
+  }
 }
+
+fillAccountAbstractionSecrets(secretsTypes.v3Bundler);
+fillAccountAbstractionSecrets(secretsTypes.v1Paymaster);
+fillAccountAbstractionSecrets(secretsTypes.v2Paymaster);
+
+export const throwOrReturn = (type: secretsTypes, key: string): string => {
+  if (!isDefined(ACCOUNT_ABSTRACTION_SECRETS[type][key]) || ACCOUNT_ABSTRACTION_SECRETS[type][key] === '') {
+    throw new InternalServerErrorException(`Secret is not loaded for ${type} and key ${key}`);
+  }
+
+  return ACCOUNT_ABSTRACTION_SECRETS[type][key];
+};

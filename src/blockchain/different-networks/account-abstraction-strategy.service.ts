@@ -30,14 +30,17 @@ import { Web3 } from 'web3';
 import { EvmHelper } from 'src/utils/helpers/evm-helper';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { HexString } from 'rox-custody_common-modules/libs/types/hex-string.type';
+import { isDefined } from 'class-validator';
 
 @Injectable()
 export class AccountAbstractionStrategyService
   implements IBlockChainPrivateServer {
   private asset: CommonAsset;
   private chain: Chain;
-  private bundlerUrl: string;
-  private paymasterUrl: string;
+  private v2BundlerUrl: string;
+  private v3BundlerUrl: string;
+  private v1PaymasterUrl: string;
+  private v2PaymasterUrl: string;
   private web3: Web3;
 
   constructor(
@@ -53,22 +56,26 @@ export class AccountAbstractionStrategyService
 
     this.chain = networkObject.chain;
 
-    const bundlerSecret = networkObject.isTest
-      ? throwOrReturn(secretsTypes.bundler, 'testnet')
-      : throwOrReturn(secretsTypes.bundler, 'mainnet');
-    const paymasterApiKey = throwOrReturn(
-      secretsTypes.paymaster,
+    const v2BundlerApiKey = networkObject.isTest
+      ? throwOrReturn(secretsTypes.v2Bundler, 'testnet')
+      : throwOrReturn(secretsTypes.v2Bundler, 'mainnet');
+    const v3BundlerApiKey = throwOrReturn(
+      secretsTypes.v3Bundler,
+      asset.networkId.toString(),
+    );
+    const v1PaymasterApiKey = throwOrReturn(
+      secretsTypes.v1Paymaster,
+      asset.networkId.toString(),
+    );
+    const v2PaymasterApiKey = throwOrReturn(
+      secretsTypes.v2Paymaster,
       asset.networkId.toString(),
     );
 
-    if (!bundlerSecret || !paymasterApiKey) {
-      throw new InternalServerErrorException(
-        'Bundler secret or paymaster api key not found',
-      );
-    }
-
-    this.bundlerUrl = `https://bundler.biconomy.io/api/v2/${this.chain.id}/${bundlerSecret}`;
-    this.paymasterUrl = `https://paymaster.biconomy.io/api/v1/${this.chain.id}/${paymasterApiKey}`;
+    this.v2BundlerUrl = `https://bundler.biconomy.io/api/v2/${this.chain.id}/${v2BundlerApiKey}`;
+    this.v3BundlerUrl = `https://bundler.biconomy.io/api/v3/${this.chain.id}/${v3BundlerApiKey}`;
+    this.v1PaymasterUrl = `https://paymaster.biconomy.io/api/v1/${this.chain.id}/${v1PaymasterApiKey}`;
+    this.v2PaymasterUrl = `https://paymaster.biconomy.io/api/v2/${this.chain.id}/${v2PaymasterApiKey}`;
 
     // Initialize Web3 with your RPC provider
     this.web3 = new Web3(new Web3.providers.HttpProvider(this.chain.rpcUrls.default.http[0]));
@@ -88,7 +95,6 @@ export class AccountAbstractionStrategyService
   private convertPrivateKeyToSmartAccount(privateKey: string) {
     const account = privateKeyToAccount(privateKey as any);
 
-
     const client = createWalletClient({
       account,
       chain: this.chain,
@@ -99,11 +105,10 @@ export class AccountAbstractionStrategyService
       pollingInterval: 2000,
     });
 
-
     const smartAccount = createSmartAccountClient({
       signer: client,
-      bundlerUrl: this.bundlerUrl,
-      paymasterUrl: this.paymasterUrl,
+      bundlerUrl: this.v2BundlerUrl,
+      paymasterUrl: this.v1PaymasterUrl,
     });
 
     return smartAccount;
@@ -229,7 +234,7 @@ export class AccountAbstractionStrategyService
     );
 
     return {
-      bundlerUrl: this.bundlerUrl,
+      bundlerUrl: this.v2BundlerUrl,
       signedTransaction: signedTransaction,
       transactionId: transactionId,
       error: null,
@@ -360,7 +365,7 @@ export class AccountAbstractionStrategyService
   // Create response object
   private createSwapTransactionResponse(signedTransaction: SignedTransaction | null, transactionId: number, error: string | null) {
     return {
-      bundlerUrl: this.bundlerUrl,
+      bundlerUrl: this.v2BundlerUrl,
       signedTransaction: signedTransaction,
       transactionId: transactionId,
       error: error,
