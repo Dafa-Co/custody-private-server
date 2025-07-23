@@ -2,11 +2,14 @@ import { Chain, createWalletClient, encodeFunctionData, hashTypedData, http } fr
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import {
   BiconomySmartAccountV2,
-  createSmartAccountClient,
+  createSmartAccountClient as createV2Client,
   PaymasterMode,
   Transaction,
   UserOperationStruct,
 } from '@biconomy/account';
+import {
+  createSmartAccountClient as createNexusClient,
+} from '@biconomy/abstractjs';
 import {
   CommonAsset,
   AssetType,
@@ -31,6 +34,9 @@ import { EvmHelper } from 'src/utils/helpers/evm-helper';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { HexString } from 'rox-custody_common-modules/libs/types/hex-string.type';
 import { isDefined } from 'class-validator';
+import { NEXUS_SUPPORTED_NETWORK_IDS } from 'src/utils/constants/nexus.constants';
+import { IConvertPrivateKeyToSmartAccountResult } from 'src/utils/interfaces/convert-private-key-to-smart-account-result.interface';
+import { BiconomyAccountTypeEnum } from 'src/utils/enums/biconomy-account-type.enum';
 
 @Injectable()
 export class AccountAbstractionStrategyService
@@ -92,11 +98,11 @@ export class AccountAbstractionStrategyService
     }
   }
 
-  private convertPrivateKeyToSmartAccount(privateKey: string) {
-    const account = privateKeyToAccount(privateKey as any);
+  private async convertPrivateKeyToSmartAccount(privateKey: string): Promise<IConvertPrivateKeyToSmartAccountResult> {
+    const eoaAccount = privateKeyToAccount(privateKey as any);
 
     const client = createWalletClient({
-      account,
+      account: eoaAccount,
       chain: this.chain,
       transport: http(this.chain.rpcUrls.default.http[0], {
         retryCount: 5,
@@ -105,21 +111,36 @@ export class AccountAbstractionStrategyService
       pollingInterval: 2000,
     });
 
-    const smartAccount = createSmartAccountClient({
+    const smartAccount = await createV2Client({
       signer: client,
       bundlerUrl: this.v2BundlerUrl,
       paymasterUrl: this.v1PaymasterUrl,
     });
 
-    return smartAccount;
+    if (!NEXUS_SUPPORTED_NETWORK_IDS.includes(this.asset.networkId)) {
+      return {
+        account: smartAccount,
+        type: BiconomyAccountTypeEnum.smartAccountV2,
+      };
+    }
+
+    // default TODO: remove
+    return {
+      account: smartAccount,
+      type: BiconomyAccountTypeEnum.smartAccountV2,
+    }
+  }
+
+  private async getSmartAccountAddress(privateKey: string) {
+    const { account, type, shouldMigrate } = await this.convertPrivateKeyToSmartAccount(privateKey);
+
+    return await account.getAddress();
   }
 
   async createWallet(): Promise<IWalletKeys> {
     const privateKey = generatePrivateKey();
 
-    const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
-
-    const address = await smartAccount.getAccountAddress();
+    const address = await this.getSmartAccountAddress(privateKey);
 
     const { address: eoaAddress } = this.web3.eth.accounts.privateKeyToAccount(privateKey);
 
@@ -210,7 +231,7 @@ export class AccountAbstractionStrategyService
       this.nonceManager.getNonce(keyId, asset.networkId),
     ]);
 
-    const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
+    const { account: smartAccount, type, shouldMigrate } = await this.convertPrivateKeyToSmartAccount(privateKey);
 
     const valueSmallUnit = BigInt(amount.toString());
 
@@ -224,7 +245,7 @@ export class AccountAbstractionStrategyService
     }
 
     const signedTransaction = await this.buildSignedTransaction(
-      smartAccount,
+      smartAccount as BiconomySmartAccountV2,
       this.asset.type === AssetType.COIN
         ? (to as HexString)
         : (this.asset.contract_address as HexString),
@@ -293,11 +314,11 @@ export class AccountAbstractionStrategyService
       this.nonceManager.getNonce(keyId, this.asset.networkId),
     ]);
 
-    const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
+    const { account: smartAccount, type, shouldMigrate } = await this.convertPrivateKeyToSmartAccount(privateKey);
 
     return {
       nonce,
-      smartAccount
+      smartAccount: smartAccount as BiconomySmartAccountV2
     };
   }
 
@@ -442,12 +463,12 @@ export class AccountAbstractionStrategyService
 
 
   private async signPermit2MessageWithSmartAccount(eip712Data: any, privateKey: string): Promise<HexString> {
-    const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
+    const { account: smartAccount, type, shouldMigrate } = await this.convertPrivateKeyToSmartAccount(privateKey);
 
     try {
       // Hash the EIP-712 data first
       const messageHash = this.callHashTypedData(eip712Data);
-      return await smartAccount.signMessage(messageHash);
+      return await (smartAccount as BiconomySmartAccountV2).signMessage(messageHash);
     } catch (error) {
       this.logger.notification('Error signing with smart account:', error);
     }
