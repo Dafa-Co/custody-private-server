@@ -1,4 +1,4 @@
-import { Chain, createWalletClient, encodeFunctionData, hashTypedData, http } from 'viem';
+import { Chain, ContractFunctionExecutionError, createWalletClient, encodeFunctionData, hashTypedData, http, PrivateKeyAccount } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import {
   BiconomySmartAccountV2,
@@ -8,7 +8,10 @@ import {
   UserOperationStruct,
 } from '@biconomy/account';
 import {
+  createBicoPaymasterClient,
   createSmartAccountClient as createNexusClient,
+  NexusClient,
+  toNexusAccount,
 } from '@biconomy/abstractjs';
 import {
   CommonAsset,
@@ -98,6 +101,29 @@ export class AccountAbstractionStrategyService
     }
   }
 
+  private async createNexusClient(eoaAccount: PrivateKeyAccount, v2Address?: `0x${string}`) {
+    const nexusAccount = await toNexusAccount({
+      signer: eoaAccount,
+      chain: this.chain,
+      transport: http(this.chain.rpcUrls.default.http[0], {
+        retryCount: 5,
+        retryDelay: 2000,
+      }),
+      accountAddress: v2Address, // will be undefined when not passed
+      pollingInterval: 2000,
+    });
+
+    const nexusClient = createNexusClient({
+      account: nexusAccount,
+      transport: http(this.v3BundlerUrl),
+      paymaster: createBicoPaymasterClient({
+        transport: http(this.v2PaymasterUrl),
+      }),
+    });
+
+    return nexusClient;
+  }
+
   private async convertPrivateKeyToSmartAccount(privateKey: string): Promise<IConvertPrivateKeyToSmartAccountResult> {
     const eoaAccount = privateKeyToAccount(privateKey as any);
 
@@ -111,36 +137,87 @@ export class AccountAbstractionStrategyService
       pollingInterval: 2000,
     });
 
-    const smartAccount = await createV2Client({
+    const v2Account = await createV2Client({
       signer: client,
       bundlerUrl: this.v2BundlerUrl,
       paymasterUrl: this.v1PaymasterUrl,
     });
 
+    const v2AccountAddress = await v2Account.getAccountAddress();
+
+    console.log('Created smart account V2 address', v2AccountAddress);
+
     if (!NEXUS_SUPPORTED_NETWORK_IDS.includes(this.asset.networkId)) {
       return {
-        account: smartAccount,
+        account: v2Account,
         type: BiconomyAccountTypeEnum.smartAccountV2,
       };
     }
 
-    // default TODO: remove
-    return {
-      account: smartAccount,
-      type: BiconomyAccountTypeEnum.smartAccountV2,
+    const isV2Deployed = await v2Account.isAccountDeployed();
+
+    console.log("Is V2 account deployed", isV2Deployed);
+
+    if (!isV2Deployed) {
+      const nexusClient = await this.createNexusClient(eoaAccount);
+
+      return {
+        account: nexusClient,
+        type: BiconomyAccountTypeEnum.nexusAccount,
+      }
+    } else {
+      const nexusClient = await this.createNexusClient(eoaAccount, v2AccountAddress);
+
+      try {
+        const installedValidators = await nexusClient.getInstalledValidators();
+        console.log('Installed validators', installedValidators);
+
+        return {
+          account: nexusClient,
+          type: BiconomyAccountTypeEnum.nexusAccount,
+        }
+      } catch (error) {
+        if (error instanceof ContractFunctionExecutionError) {
+          console.log("Should migrate V2 account to Nexus");
+
+          return {
+            account: v2Account,
+            type: BiconomyAccountTypeEnum.smartAccountV2,
+            shouldMigrate: true,
+          }
+        }
+
+        this.logger.error("Error checking if nexus account is deployed", error);
+
+        return {
+          account: v2Account,
+          type: BiconomyAccountTypeEnum.smartAccountV2,
+        }
+      }
     }
   }
 
   private async getSmartAccountAddress(privateKey: string) {
     const { account, type, shouldMigrate } = await this.convertPrivateKeyToSmartAccount(privateKey);
 
-    return await account.getAddress();
+    console.log('Account type', type);
+    console.log('Should migrate', shouldMigrate);
+    console.log('account', account);
+
+    switch (type) {
+      case BiconomyAccountTypeEnum.smartAccountV2:
+        return await (account as BiconomySmartAccountV2).getAccountAddress();
+      case BiconomyAccountTypeEnum.nexusAccount:
+        return (account as NexusClient).account.address;
+    }
   }
 
   async createWallet(): Promise<IWalletKeys> {
     const privateKey = generatePrivateKey();
 
     const address = await this.getSmartAccountAddress(privateKey);
+
+    console.log('Address', address);
 
     const { address: eoaAddress } = this.web3.eth.accounts.privateKeyToAccount(privateKey);
 

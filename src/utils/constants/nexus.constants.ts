@@ -13,6 +13,5 @@ export const NEXUS_SUPPORTED_NETWORK_IDS = [
     supportedNetworks.Blast,
     supportedNetworks.Scroll,
     supportedNetworks.Gnosis,
-    supportedNetworks.sepolia,
     supportedNetworks.baseSepolia,
 ];

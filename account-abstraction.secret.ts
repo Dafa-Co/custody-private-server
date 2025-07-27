@@ -50,12 +50,24 @@ export const ACCOUNT_ABSTRACTION_SECRETS: accountAbstractionSecrets = {
   v2Paymaster: {},
 };
 
-const supportedNetworkValues = Object.values(supportedNetworks).filter(
-  (value) => typeof value === 'number',
-);
+const EVM_NETWORK_IDS = [
+    supportedNetworks.Ethereum,
+    supportedNetworks.Polygon,
+    supportedNetworks.BSC,
+    supportedNetworks.Arbitrum_One,
+    supportedNetworks.Optimism,
+    supportedNetworks.Avalanche,
+    supportedNetworks.Base,
+    supportedNetworks.Mantle,
+    supportedNetworks.Blast,
+    supportedNetworks.Scroll,
+    supportedNetworks.Gnosis,
+    supportedNetworks.sepolia,
+    supportedNetworks.baseSepolia,
+];
 
 const fillAccountAbstractionSecrets = (type: secretsTypes) => {
-  for (const value of supportedNetworkValues) {
+  for (const value of EVM_NETWORK_IDS) {
     ACCOUNT_ABSTRACTION_SECRETS[type][value] = returnSecret(type, value.toString());
   }
 }
