@@ -1,9 +1,8 @@
-import { NexusClient } from "@biconomy/abstractjs";
-import { BiconomySmartAccountV2 } from "@biconomy/account";
 import { BiconomyAccountTypeEnum } from "../enums/biconomy-account-type.enum";
+import { ISmartAccount } from "src/blockchain/different-networks/account-abstraction/interfaces/smart-account.interface";
 
 export interface IConvertPrivateKeyToSmartAccountResult {
-    account: BiconomySmartAccountV2 | NexusClient;
+    account: ISmartAccount;
     type: BiconomyAccountTypeEnum;
     shouldMigrate?: boolean;
 }
