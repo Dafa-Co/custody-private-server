@@ -54,7 +54,12 @@ import { V2SmartAccount } from './implementations/v2-smart-account';
 import { NexusSmartAccount } from './implementations/nexus-smart-account';
 import { CustomUserOperation } from './interfaces/custom-user-operation.interface';
 import { IConvertPrivateKeyToSmartAccountResult } from 'src/utils/interfaces/convert-private-key-to-smart-account-result.interface';
-import { NEXUS_BOOTSTRAP_ADDRESS, NEXUS_IMPLEMENTATION_ADDRESS, NEXUS_SUPPORTED_NETWORK_IDS } from './constants/nexus.constants';
+import {
+  NEXUS_BOOTSTRAP_ADDRESS,
+  NEXUS_IMPLEMENTATION_ADDRESS,
+  NEXUS_SUPPORTED_NETWORK_IDS,
+} from './constants/nexus.constants';
+import { isDefined } from 'class-validator';
 
 @Injectable()
 export class AccountAbstractionStrategyService
@@ -447,7 +452,10 @@ export class AccountAbstractionStrategyService
     const signedUserOp = await this.buildSignedUserOp(account, calls, nonce);
 
     return {
-      bundlerUrl: this.v2BundlerUrl,
+      bundlerUrl:
+        type === BiconomyAccountTypeEnum.nexusAccount
+          ? this.v3BundlerUrl
+          : this.v2BundlerUrl,
       signedTransaction: signedUserOp,
       transactionId: transactionId,
       error: null,
@@ -490,6 +498,7 @@ export class AccountAbstractionStrategyService
         signedUserOp,
         transactionId,
         null,
+        type,
       );
     } catch (error) {
       this.logger.error('Error in getSignedSwapTransaction:', error);
@@ -589,9 +598,13 @@ export class AccountAbstractionStrategyService
     signedTransaction: SignedTransaction | null,
     transactionId: number,
     error: string | null,
+    type?: BiconomyAccountTypeEnum,
   ) {
     return {
-      bundlerUrl: this.v2BundlerUrl,
+      bundlerUrl:
+        isDefined(type) && type === BiconomyAccountTypeEnum.nexusAccount
+          ? this.v3BundlerUrl
+          : this.v2BundlerUrl,
       signedTransaction: signedTransaction,
       transactionId: transactionId,
       error: error,
