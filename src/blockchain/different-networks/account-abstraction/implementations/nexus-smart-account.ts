@@ -1,11 +1,11 @@
 import { Transaction } from '@biconomy/account';
 import { ISmartAccount } from '../interfaces/smart-account.interface';
-import { CustomSignedUserOperation, CustomUserOperation } from '../interfaces/custom-user-operation.interface';
 import { HexString } from 'rox-custody_common-modules/libs/types/hex-string.type';
 import { NexusClient } from '@biconomy/abstractjs';
 import { ContractFunctionExecutionError } from 'viem';
 import { UnretriableInternalServerErrorException } from 'rox-custody_common-modules/libs/errors/unretriable-exceptions';
 import { softJsonStringify } from 'rox-custody_common-modules/libs/utils/soft-json-stringify.utils';
+import { CustomSignedUserOperation, CustomUserOperation } from 'rox-custody_common-modules/libs/interfaces/custom-user-operation.interface';
 
 export class NexusSmartAccount implements ISmartAccount {
   constructor(private readonly account: NexusClient) {}

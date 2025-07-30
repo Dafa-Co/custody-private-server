@@ -1,5 +1,5 @@
 import { Transaction } from "@biconomy/account";
-import { CustomSignedUserOperation, CustomUserOperation } from "./custom-user-operation.interface";
+import { CustomSignedUserOperation, CustomUserOperation } from "rox-custody_common-modules/libs/interfaces/custom-user-operation.interface";
 import { HexString } from "rox-custody_common-modules/libs/types/hex-string.type";
 
 export interface ISmartAccount {

@@ -52,7 +52,6 @@ import { BiconomyAccountTypeEnum } from 'src/utils/enums/biconomy-account-type.e
 import { ISmartAccount } from './interfaces/smart-account.interface';
 import { V2SmartAccount } from './implementations/v2-smart-account';
 import { NexusSmartAccount } from './implementations/nexus-smart-account';
-import { CustomUserOperation } from './interfaces/custom-user-operation.interface';
 import { IConvertPrivateKeyToSmartAccountResult } from 'src/utils/interfaces/convert-private-key-to-smart-account-result.interface';
 import {
   ENTRYPOINT_ADDRESS_V6,
@@ -62,6 +61,7 @@ import {
   NEXUS_SUPPORTED_NETWORK_IDS,
 } from './constants/nexus.constants';
 import { isDefined } from 'class-validator';
+import { CustomUserOperation } from 'rox-custody_common-modules/libs/interfaces/custom-user-operation.interface';
 
 @Injectable()
 export class AccountAbstractionStrategyService

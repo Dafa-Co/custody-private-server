@@ -1,10 +1,7 @@
 import { BiconomySmartAccountV2, BuildUserOpOptions, PaymasterMode, Transaction } from '@biconomy/account';
 import { ISmartAccount } from '../interfaces/smart-account.interface';
-import {
-  CustomSignedUserOperation,
-  CustomUserOperation,
-} from '../interfaces/custom-user-operation.interface';
 import { HexString } from 'rox-custody_common-modules/libs/types/hex-string.type';
+import { CustomSignedUserOperation, CustomUserOperation } from 'rox-custody_common-modules/libs/interfaces/custom-user-operation.interface';
 
 export class V2SmartAccount implements ISmartAccount {
   constructor(
