@@ -14,10 +14,12 @@ export class NexusSmartAccount implements ISmartAccount {
     calls: Transaction[],
     nonce: number,
   ): Promise<CustomUserOperation> {
+    console.log('callssss', calls);
     const userOp = await this.account.prepareUserOperation({
       calls,
       nonce,
     } as any);
+    console.log('helloooo');
 
     const keys = ["paymasterPostOpGasLimit", "paymasterVerificationGasLimit"];
 

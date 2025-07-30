@@ -12,6 +12,9 @@ import { SolanaStrategyService } from './different-networks/solana-strategy.serv
 import { XrpStrategyService } from './different-networks/xrp-strategy.service';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { AccountAbstractionStrategyService } from './different-networks/account-abstraction/account-abstraction-strategy.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { PrivateKeyVersion } from 'src/keys-manager/entities/private-key-version.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class BlockchainFactoriesService {
@@ -19,7 +22,9 @@ export class BlockchainFactoriesService {
 
   constructor(
     private readonly nonceManager: NonceManagerService,
-    private readonly logger: CustodyLogger
+    private readonly logger: CustodyLogger,
+    @InjectRepository(PrivateKeyVersion)
+    private readonly privateKeyVersionRepository: Repository<PrivateKeyVersion>,
   ) { }
 
   async getStrategy(asset: CommonAsset): Promise<IBlockChainPrivateServer> {
@@ -34,7 +39,7 @@ export class BlockchainFactoriesService {
 
     switch (category) {
       case NetworkCategory.EVM:
-        strategy = new AccountAbstractionStrategyService(this.nonceManager, this.logger);
+        strategy = new AccountAbstractionStrategyService(this.nonceManager, this.logger, this.privateKeyVersionRepository);
         break;
 
       case NetworkCategory.BitCoin:

@@ -6,6 +6,7 @@ export interface IWalletKeys {
   privateKey: string;
   address: string;
   eoaAddress?: string;
+  version?: number;
 }
 
 export interface InitBlockChainPrivateServerStrategies {

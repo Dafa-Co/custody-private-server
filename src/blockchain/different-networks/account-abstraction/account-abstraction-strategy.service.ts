@@ -1,6 +1,5 @@
 import {
   Chain,
-  ContractFunctionExecutionError,
   createWalletClient,
   encodeAbiParameters,
   encodeFunctionData,
@@ -10,16 +9,12 @@ import {
 } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import {
-  BiconomySmartAccountV2,
   createSmartAccountClient as createV2Client,
-  PaymasterMode,
   Transaction,
-  UserOperationStruct,
 } from '@biconomy/account';
 import {
   createBicoPaymasterClient,
   createSmartAccountClient as createNexusClient,
-  NexusClient,
   toNexusAccount,
 } from '@biconomy/abstractjs';
 import {
@@ -54,14 +49,19 @@ import { V2SmartAccount } from './implementations/v2-smart-account';
 import { NexusSmartAccount } from './implementations/nexus-smart-account';
 import { IConvertPrivateKeyToSmartAccountResult } from 'src/utils/interfaces/convert-private-key-to-smart-account-result.interface';
 import {
-  ENTRYPOINT_ADDRESS_V6,
-  ENTRYPOINT_ADDRESS_V7,
+  ENTRY_POINT_ADDRESS_V6,
+  ENTRY_POINT_ADDRESS_V7,
   NEXUS_BOOTSTRAP_ADDRESS,
   NEXUS_IMPLEMENTATION_ADDRESS,
   NEXUS_SUPPORTED_NETWORK_IDS,
+  V2_FACTORY_ADDRESS,
 } from './constants/nexus.constants';
 import { isDefined } from 'class-validator';
 import { CustomUserOperation } from 'rox-custody_common-modules/libs/interfaces/custom-user-operation.interface';
+import { convertBigIntsToStrings } from 'src/utils/helpers/convert-big-ints-to-strings';
+import { Repository } from 'typeorm';
+import { PrivateKeyVersion } from 'src/keys-manager/entities/private-key-version.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class AccountAbstractionStrategyService
@@ -78,6 +78,8 @@ export class AccountAbstractionStrategyService
   constructor(
     private readonly nonceManager: NonceManagerService,
     private readonly logger: CustodyLogger,
+    @InjectRepository(PrivateKeyVersion)
+    private readonly privateKeyVersionRepository: Repository<PrivateKeyVersion>,
   ) {}
 
   async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
@@ -157,6 +159,7 @@ export class AccountAbstractionStrategyService
 
   private async convertPrivateKeyToSmartAccount(
     privateKey: string,
+    privateKeyId?: number,
     withPaymaster: boolean = true,
   ): Promise<IConvertPrivateKeyToSmartAccountResult> {
     const eoaAccount = privateKeyToAccount(privateKey as any);
@@ -193,6 +196,19 @@ export class AccountAbstractionStrategyService
     const isV2Deployed = await v2SmartAccount.isAccountDeployed();
 
     console.log('Is V2 account deployed', isV2Deployed);
+
+    if (!isV2Deployed && isDefined(privateKeyId)) {
+      const privateKeyVersion = await this.privateKeyVersionRepository.findOneBy({
+        privateKeyId,
+      });
+      
+      if (!isDefined(privateKeyVersion) || privateKeyVersion.version === 0) {
+        return {
+          account: v2SmartAccount,
+          type: BiconomyAccountTypeEnum.smartAccountV2,
+        };
+      }
+    }
 
     const nexusClient = await this.createNexusClient(
       eoaAccount,
@@ -234,24 +250,28 @@ export class AccountAbstractionStrategyService
     console.log('Should migrate', shouldMigrate);
     console.log('account', account);
 
-    return account;
+    return {
+      account,
+      version: type === BiconomyAccountTypeEnum.smartAccountV2 ? 0 : 1,
+    };
   }
 
   async createWallet(): Promise<IWalletKeys> {
     const privateKey = generatePrivateKey();
 
-    const smartAccount = await this.getSmartAccount(privateKey);
+    const { account, version } = await this.getSmartAccount(privateKey);
 
-    const address = await smartAccount.getAddress();
+    const address = await account.getAddress();
 
     console.log('Address', address);
 
-    const eoaAddress = await smartAccount.getEOAAddress();
+    const eoaAddress = await account.getEOAAddress();
 
     return {
       privateKey,
       address,
       eoaAddress,
+      version,
     };
   }
 
@@ -290,6 +310,7 @@ export class AccountAbstractionStrategyService
     try {
       return await account.buildUserOp(calls, nonce);
     } catch (error) {
+      console.error(error);
       if (attempt < maxRetries) {
         return this.retryBuildUserOp(
           account,
@@ -396,6 +417,7 @@ export class AccountAbstractionStrategyService
       const v2AccountAddress = await account.getAddress();
       const eoaAddress = await account.getEOAAddress();
 
+      console.log('adding nexus migration calls');
       calls = this.addNexusMigrationCalls(calls, v2AccountAddress, eoaAddress);
     }
 
@@ -413,7 +435,10 @@ export class AccountAbstractionStrategyService
     ]);
 
     const { account, type, shouldMigrate } =
-      await this.convertPrivateKeyToSmartAccount(privateKey);
+      await this.convertPrivateKeyToSmartAccount(privateKey, keyId);
+
+    console.log('Account type', type);
+    console.log('Should migrate', shouldMigrate);
 
     const valueSmallUnit = BigInt(amount.toString());
 
@@ -451,19 +476,25 @@ export class AccountAbstractionStrategyService
       shouldMigrate,
     );
 
+    console.log('calls after migration');
+
     const signedUserOp = await this.buildSignedUserOp(account, calls, nonce);
+
+    const parsedSignedUserOp = convertBigIntsToStrings(signedUserOp);
+
+    console.log('Parsed signed user op', parsedSignedUserOp);
 
     return {
       bundlerUrl:
         type === BiconomyAccountTypeEnum.nexusAccount
           ? this.v3BundlerUrl
           : this.v2BundlerUrl,
-      signedTransaction: signedUserOp,
+      signedTransaction: parsedSignedUserOp,
       transactionId: transactionId,
-      entrypointAddress:
+      entryPointAddress:
         type === BiconomyAccountTypeEnum.nexusAccount
-          ? ENTRYPOINT_ADDRESS_V7
-          : ENTRYPOINT_ADDRESS_V6,
+          ? ENTRY_POINT_ADDRESS_V7
+          : ENTRY_POINT_ADDRESS_V6,
       error: null,
     };
   }
@@ -484,6 +515,7 @@ export class AccountAbstractionStrategyService
 
       // Handle permit2 signature and prepare final transaction data
       const finalTxData = await this.prepareTransactionData(
+        keyId,
         txParams.data,
         permit2,
         privateKey,
@@ -499,9 +531,11 @@ export class AccountAbstractionStrategyService
         shouldMigrate,
       );
 
+      const parsedSignedUserOp = convertBigIntsToStrings(signedUserOp);
+
       // Return success response
       return this.createSwapTransactionResponse(
-        signedUserOp,
+        parsedSignedUserOp,
         transactionId,
         null,
         type,
@@ -535,7 +569,7 @@ export class AccountAbstractionStrategyService
     ]);
 
     const { account, type, shouldMigrate } =
-      await this.convertPrivateKeyToSmartAccount(privateKey, false); // without paymaster
+      await this.convertPrivateKeyToSmartAccount(privateKey, keyId, false); // without paymaster
 
     return {
       nonce,
@@ -547,12 +581,14 @@ export class AccountAbstractionStrategyService
 
   // Handle permit2 signature and prepare final transaction data
   private async prepareTransactionData(
+    privateKeyId: number,
     data: string,
     permit2: any,
     privateKey: string,
   ): Promise<string> {
     if (permit2?.eip712) {
       const permit2Signature = await this.signPermit2MessageWithSmartAccount(
+        privateKeyId,
         permit2.eip712,
         privateKey,
       );
@@ -613,10 +649,10 @@ export class AccountAbstractionStrategyService
           : this.v2BundlerUrl,
       signedTransaction: signedTransaction,
       transactionId: transactionId,
-      entrypointAddress: 
+      entryPointAddress:
         isDefined(type) && type === BiconomyAccountTypeEnum.nexusAccount
-          ? ENTRYPOINT_ADDRESS_V7
-          : ENTRYPOINT_ADDRESS_V6,
+          ? ENTRY_POINT_ADDRESS_V7
+          : ENTRY_POINT_ADDRESS_V6,
       error: error,
     };
   }
@@ -635,10 +671,11 @@ export class AccountAbstractionStrategyService
   }
 
   private async signPermit2MessageWithSmartAccount(
+    privateKeyId: number,
     eip712Data: any,
     privateKey: string,
   ): Promise<HexString> {
-    const { account } = await this.convertPrivateKeyToSmartAccount(privateKey);
+    const { account } = await this.convertPrivateKeyToSmartAccount(privateKey, privateKeyId, false);
 
     try {
       // Hash the EIP-712 data first

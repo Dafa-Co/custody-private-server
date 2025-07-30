@@ -9,6 +9,7 @@ import { IGenerateKeyPairResponse } from 'rox-custody_common-modules/libs/interf
 import { IdempotentKeyEntity } from './entities/idempotent-key.entity';
 import { isDefined } from 'class-validator';
 import { v4 as uuidv4 } from 'uuid';
+import { PrivateKeyVersion } from './entities/private-key-version.entity';
 
 @Injectable()
 export class KeysManagerService {
@@ -77,7 +78,7 @@ export class KeysManagerService {
       const blockchainFactory =
         await this.blockchainFactoriesService.getStrategy(asset);
       const wallet = await blockchainFactory.createWallet();
-      const { address, privateKey, eoaAddress } = wallet;
+      const { address, privateKey, eoaAddress, version } = wallet;
 
     const encryptedPrivateKey = await this.corporateKey.encryptData(corporateId, privateKey);
 
@@ -105,6 +106,17 @@ export class KeysManagerService {
         })
         .where('idempotentKey = :idempotentKey', { idempotentKey })
         .execute();
+
+      if (isDefined(version)) {
+        await manager.getRepository(PrivateKeyVersion)
+          .createQueryBuilder()
+          .insert()
+          .values({
+            privateKeyId: savedPrivateKey.identifiers[0].id,
+            version,
+          })
+          .execute();
+      }
 
       return {
         address,
