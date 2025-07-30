@@ -55,6 +55,8 @@ import { NexusSmartAccount } from './implementations/nexus-smart-account';
 import { CustomUserOperation } from './interfaces/custom-user-operation.interface';
 import { IConvertPrivateKeyToSmartAccountResult } from 'src/utils/interfaces/convert-private-key-to-smart-account-result.interface';
 import {
+  ENTRYPOINT_ADDRESS_V6,
+  ENTRYPOINT_ADDRESS_V7,
   NEXUS_BOOTSTRAP_ADDRESS,
   NEXUS_IMPLEMENTATION_ADDRESS,
   NEXUS_SUPPORTED_NETWORK_IDS,
@@ -458,6 +460,10 @@ export class AccountAbstractionStrategyService
           : this.v2BundlerUrl,
       signedTransaction: signedUserOp,
       transactionId: transactionId,
+      entrypointAddress:
+        type === BiconomyAccountTypeEnum.nexusAccount
+          ? ENTRYPOINT_ADDRESS_V7
+          : ENTRYPOINT_ADDRESS_V6,
       error: null,
     };
   }
@@ -607,6 +613,10 @@ export class AccountAbstractionStrategyService
           : this.v2BundlerUrl,
       signedTransaction: signedTransaction,
       transactionId: transactionId,
+      entrypointAddress: 
+        isDefined(type) && type === BiconomyAccountTypeEnum.nexusAccount
+          ? ENTRYPOINT_ADDRESS_V7
+          : ENTRYPOINT_ADDRESS_V6,
       error: error,
     };
   }
