@@ -21,7 +21,7 @@ export class KeysManagerService {
     private readonly blockchainFactoriesService: BlockchainFactoriesService,
     private corporateKey: CorporatePrivateKeysService,
     @InjectDataSource() private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   private getKeysParts(
     percentageToStoreInCustody: number,
@@ -58,6 +58,18 @@ export class KeysManagerService {
       .orUpdate(['idempotentKey'])
       .execute();
 
+
+    const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset);
+    const wallet = await blockchainFactory.createWallet();
+    const { address, privateKey, eoaAddress, version } = wallet;
+
+    const encryptedPrivateKey = await this.corporateKey.encryptData(corporateId, privateKey);
+
+    const keysParts = this.getKeysParts(
+      percentageToStoreInCustody,
+      encryptedPrivateKey,
+    );
+
     return this.dataSource.transaction(async (manager) => {
       // lock the row with FOR UPDATE
       const lockedRow = await manager
@@ -74,18 +86,6 @@ export class KeysManagerService {
           eoaAddress: lockedRow.eoaAddress,
           alreadyGenerated: true,
         };
-
-      const blockchainFactory =
-        await this.blockchainFactoriesService.getStrategy(asset);
-      const wallet = await blockchainFactory.createWallet();
-      const { address, privateKey, eoaAddress, version } = wallet;
-
-    const encryptedPrivateKey = await this.corporateKey.encryptData(corporateId, privateKey);
-
-      const keysParts = this.getKeysParts(
-        percentageToStoreInCustody,
-        encryptedPrivateKey,
-      );
 
       const savedPrivateKey = await manager.getRepository(PrivateKeys)
         .createQueryBuilder('private_key')
