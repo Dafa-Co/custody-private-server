@@ -184,8 +184,6 @@ export class AccountAbstractionStrategyService
 
     const v2AccountAddress = await v2SmartAccount.getAddress();
 
-    console.log('Created smart account V2 address', v2AccountAddress);
-
     if (!NEXUS_SUPPORTED_NETWORK_IDS.includes(this.asset.networkId)) {
       return {
         account: v2SmartAccount,
@@ -195,13 +193,12 @@ export class AccountAbstractionStrategyService
 
     const isV2Deployed = await v2SmartAccount.isAccountDeployed();
 
-    console.log('Is V2 account deployed', isV2Deployed);
-
     if (!isV2Deployed && isDefined(privateKeyId)) {
-      const privateKeyVersion = await this.privateKeyVersionRepository.findOneBy({
-        privateKeyId,
-      });
-      
+      const privateKeyVersion =
+        await this.privateKeyVersionRepository.findOneBy({
+          privateKeyId,
+        });
+
       if (!isDefined(privateKeyVersion) || privateKeyVersion.version === 0) {
         return {
           account: v2SmartAccount,
@@ -246,10 +243,6 @@ export class AccountAbstractionStrategyService
     const { account, type, shouldMigrate } =
       await this.convertPrivateKeyToSmartAccount(privateKey);
 
-    console.log('Account type', type);
-    console.log('Should migrate', shouldMigrate);
-    console.log('account', account);
-
     return {
       account,
       version: type === BiconomyAccountTypeEnum.smartAccountV2 ? 0 : 1,
@@ -262,8 +255,6 @@ export class AccountAbstractionStrategyService
     const { account, version } = await this.getSmartAccount(privateKey);
 
     const address = await account.getAddress();
-
-    console.log('Address', address);
 
     const eoaAddress = await account.getEOAAddress();
 
@@ -331,7 +322,6 @@ export class AccountAbstractionStrategyService
     v2AccountAddress: HexString,
     eoaAddress: HexString,
   ) {
-    console.log('Preparing update implementation to Nexus...');
     const updateImplementationCalldata = encodeFunctionData({
       abi: [
         {
@@ -351,7 +341,6 @@ export class AccountAbstractionStrategyService
       data: updateImplementationCalldata,
     };
 
-    console.log('Preparing initialize Nexus account...');
     const initData = encodeFunctionData({
       abi: [
         {
@@ -417,7 +406,10 @@ export class AccountAbstractionStrategyService
       const v2AccountAddress = await account.getAddress();
       const eoaAddress = await account.getEOAAddress();
 
-      console.log('adding nexus migration calls');
+      this.logger.info(
+        `Migrating account ${v2AccountAddress} to Nexus account`,
+      );
+
       calls = this.addNexusMigrationCalls(calls, v2AccountAddress, eoaAddress);
     }
 
@@ -436,9 +428,6 @@ export class AccountAbstractionStrategyService
 
     const { account, type, shouldMigrate } =
       await this.convertPrivateKeyToSmartAccount(privateKey, keyId);
-
-    console.log('Account type', type);
-    console.log('Should migrate', shouldMigrate);
 
     const valueSmallUnit = BigInt(amount.toString());
 
@@ -467,8 +456,6 @@ export class AccountAbstractionStrategyService
       },
     ];
 
-    console.log('Calls before migration check', calls);
-
     calls = await this.migrateToNexusAccountIfNeeded(
       account,
       calls,
@@ -476,13 +463,9 @@ export class AccountAbstractionStrategyService
       shouldMigrate,
     );
 
-    console.log('calls after migration');
-
     const signedUserOp = await this.buildSignedUserOp(account, calls, nonce);
 
     const parsedSignedUserOp = convertBigIntsToStrings(signedUserOp);
-
-    console.log('Parsed signed user op', parsedSignedUserOp);
 
     return {
       bundlerUrl:
@@ -675,7 +658,11 @@ export class AccountAbstractionStrategyService
     eip712Data: any,
     privateKey: string,
   ): Promise<HexString> {
-    const { account } = await this.convertPrivateKeyToSmartAccount(privateKey, privateKeyId, false);
+    const { account } = await this.convertPrivateKeyToSmartAccount(
+      privateKey,
+      privateKeyId,
+      false,
+    );
 
     try {
       // Hash the EIP-712 data first
