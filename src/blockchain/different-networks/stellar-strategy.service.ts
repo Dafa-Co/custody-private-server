@@ -48,20 +48,23 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
         const { transactionId } = dto;
 
         try {
-            const signedTransaction =
+            const signedTransaction: StellarSdk.FeeBumpTransaction =
                 this.asset.type === AssetType.COIN
                     ? await this.getSignedTransactionCoin(dto, privateKey, secondPrivateKey)
                     : await this.getSignedTransactionToken(dto, privateKey, secondPrivateKey);
 
+            // Convert the transaction to XDR string for safe JSON serialization
+            const transactionXdr = signedTransaction.toXDR();
+
             return {
                 bundlerUrl: this.host,
-                signedTransaction: signedTransaction,
+                signedTransaction: transactionXdr,
                 error: null,
                 transactionId: transactionId,
             };
 
         } catch (error) {
-            this.logger.error(`Stellar Transaction Signing error: ${softJsonStringify(error)}`)
+            this.logger.error(`Stellar Transaction Signing error: ${error?.stack ?? error?.message}`)
             return {
                 bundlerUrl: this.host,
                 signedTransaction: null,
@@ -78,12 +81,10 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
     ): Promise<StellarSdk.FeeBumpTransaction> {
         const { to } = dto;
 
-        const isCreateAccountTransaction: boolean = await this.isExistingAccount(to);
-
-        if (isCreateAccountTransaction) {
-            return await this.getSignedCreateAccountTransaction(dto, privateKey, secondPrivateKey);
-        } else {
+        if (await this.isExistingAccount(to)) {
             return await this.getSignedPaymentTransaction(dto, privateKey, secondPrivateKey);
+        } else {
+            return await this.getSignedCreateAccountTransaction(dto, privateKey, secondPrivateKey);
         }
     }
 
