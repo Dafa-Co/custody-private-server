@@ -14,12 +14,10 @@ export class NexusSmartAccount implements ISmartAccount {
     calls: Transaction[],
     nonce: number,
   ): Promise<CustomUserOperation> {
-    console.log('callssss', calls);
     const userOp = await this.account.prepareUserOperation({
       calls,
       nonce,
     } as any);
-    console.log('helloooo');
 
     const keys = ["paymasterPostOpGasLimit", "paymasterVerificationGasLimit"];
 
@@ -57,14 +55,11 @@ export class NexusSmartAccount implements ISmartAccount {
 
   async isAccountDeployed(): Promise<boolean> {
     try {
-      const installedValidators = await this.account.getInstalledValidators();
-      console.log('Installed validators', installedValidators);
+      await this.account.getInstalledValidators();
 
       return true;
     } catch (error) {
       if (error instanceof ContractFunctionExecutionError) {
-        console.log('Should migrate V2 account to Nexus');
-
         return false;
       }
 
