@@ -5,9 +5,18 @@ on:
 
 jobs:
   build:
+    if: github.actor == 'shehab-emad98' || github.actor == 'ahmadgamal99'
     runs-on: ubuntu-latest
 
     steps:
+
+    - name: Restrict to allowed users
+      run: |
+        if [[ "${GITHUB_TRIGGERING_ACTOR}" != "shehab-emad98" && "${GITHUB_TRIGGERING_ACTOR}" != "ahmadgamal99" ]]; then
+          echo "❌ User $GITHUB_TRIGGERING_ACTOR is not allowed to run or rerun this workflow."
+          exit 1
+        fi
+        
     - uses: actions/checkout@v4
 
     - name: Configure AWS credentials
@@ -52,7 +61,7 @@ jobs:
       with:
         host: 49.13.230.22
         username: root
-        key: ${{ secrets.SSH_PRIVATE_KEY_2 }}
+        key: ${{ secrets.SSH_PRIVATE_KEY_3 }}
         envs: ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG
         script: |
           aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 780202038201.dkr.ecr.eu-north-1.amazonaws.com

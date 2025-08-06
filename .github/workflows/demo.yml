@@ -52,7 +52,7 @@ jobs:
       with:
         host: 49.13.230.22
         username: root
-        key: ${{ secrets.SSH_PRIVATE_KEY_2 }}
+        key: ${{ secrets.SSH_PRIVATE_KEY_3 }}
         envs: ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,CONTAINER_NAME
         script: |
           # Stop and remove container if it exists
