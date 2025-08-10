@@ -58,7 +58,10 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
 
             return {
                 bundlerUrl: this.host,
-                signedTransaction: transactionXdr,
+                signedTransaction: {
+                    transactionXdr,
+                    transactionHash: signedTransaction.hash().toString(),
+                },
                 error: null,
                 transactionId: transactionId,
             };
