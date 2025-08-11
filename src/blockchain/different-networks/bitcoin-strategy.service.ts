@@ -279,9 +279,7 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
   // Helper method to fetch UTXOs
   private async fetchUTXOs(address: string): Promise<UTXO[]> {
     try {
-      console.log('fetching utxos for address', address);
       const response = await this.apiOfMempoolSpace.get(`address/${address}/utxo`);
-      console.log('utxos', response.data);
       return response.data.map((utxo: any) => ({
         txid: utxo.txid,
         vout: utxo.vout,
