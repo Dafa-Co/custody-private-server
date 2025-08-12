@@ -9,6 +9,7 @@ import { IGenerateKeyPairResponse } from 'rox-custody_common-modules/libs/interf
 import { IdempotentKeyEntity } from './entities/idempotent-key.entity';
 import { isDefined } from 'class-validator';
 import { v4 as uuidv4 } from 'uuid';
+import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 
 @Injectable()
 export class KeysManagerService {
@@ -20,6 +21,7 @@ export class KeysManagerService {
     private readonly blockchainFactoriesService: BlockchainFactoriesService,
     private corporateKey: CorporatePrivateKeysService,
     @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly logger: CustodyLogger,
   ) { }
 
   private getKeysParts(
@@ -39,6 +41,7 @@ export class KeysManagerService {
   async generateKeyPair(
     dto: GenerateKeyPairBridge,
   ): Promise<IGenerateKeyPairResponse> {
+    this.logger.info(`[PRIVATE SERVER] generateKey: ${JSON.stringify(dto)}`);
     const {
       asset,
       corporateId,
@@ -57,9 +60,12 @@ export class KeysManagerService {
       .orUpdate(['idempotentKey'])
       .execute();
 
+    this.logger.info(`[PRIVATE SERVER] before createWallet, idempotentKey: ${idempotentKey}`);
 
     const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset);
     const wallet = await blockchainFactory.createWallet();
+
+    this.logger.info(`[PRIVATE SERVER] after createWallet, public address: ${wallet.address}`);
     const { address, privateKey, eoaAddress } = wallet;
 
     const encryptedPrivateKey = await this.corporateKey.encryptData(corporateId, privateKey);
