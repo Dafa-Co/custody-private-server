@@ -109,9 +109,8 @@ export class PolkadotStrategyService implements IBlockChainPrivateServer {
         // Add from seed (assumes it's a valid 32-byte secret seed)
         const sender = keyring.addFromSeed(privateKeySeed);
         const decimalAmount = new Decimal(amount);
-        const transfer = this.api.tx.balances.transferKeepAlive(to, (new BigNumber(decimalAmount.toJSON())).toString());
-        const accountInfo = await this.api.query.system.account(sender.address);
-        const { nonce } = accountInfo as AccountInfo;
+        const nonce = await this.api.rpc.system.accountNextIndex(sender.address);
+        const transfer = this.api.tx.balances.transferKeepAlive(to, decimalAmount.toJSON());
         const signedTx = await transfer.signAsync(sender, { nonce });
         const currentBlock = (await this.api.rpc.chain.getHeader()).number.toNumber();
         const eraPeriod = 64;
