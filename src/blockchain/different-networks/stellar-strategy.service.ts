@@ -48,7 +48,7 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
         const { transactionId } = dto;
 
         try {
-            const signedTransaction: StellarSdk.FeeBumpTransaction =
+            const signedTransaction: StellarSdk.FeeBumpTransaction | StellarSdk.Transaction =
                 this.asset.type === AssetType.COIN
                     ? await this.getSignedTransactionCoin(dto, privateKey, secondPrivateKey)
                     : await this.getSignedTransactionToken(dto, privateKey, secondPrivateKey);
@@ -81,7 +81,7 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
         dto: SignTransactionDto,
         privateKey: string,
         secondPrivateKey?: string
-    ): Promise<StellarSdk.FeeBumpTransaction> {
+    ): Promise<StellarSdk.FeeBumpTransaction | StellarSdk.Transaction> {
         const { to } = dto;
 
         if (await this.isExistingAccount(to)) {
@@ -95,95 +95,83 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
         dto: SignTransactionDto,
         privateKey: string,
         secondPrivateKey?: string
-    ): Promise<StellarSdk.FeeBumpTransaction> {
+    ): Promise<StellarSdk.FeeBumpTransaction | StellarSdk.Transaction> {
         const { amount, to } = dto;
 
-        const senderKey = StellarSdk.Keypair.fromSecret(privateKey);
-        const gasStationKey = StellarSdk.Keypair.fromSecret(secondPrivateKey);
+        const operation = StellarSdk.Operation.createAccount({
+            destination: to,
+            startingBalance: DecimalsHelper.divide(
+                amount,
+                DecimalsHelper.pow(10, this.asset.decimals)
+            ).toString(),
+        });
 
-        const senderAccount: StellarSdk.Account = await this.horizonServer.loadAccount(senderKey.publicKey());
-
-        // Step 1: User builds and signs the inner transaction with minimal fee
-        const innerTransaction = new StellarSdk.TransactionBuilder(
-            senderAccount,
-            {
-                fee: StellarSdk.BASE_FEE, // Minimal fee
-                networkPassphrase: this.networkObject.isTest ? StellarSdk.Networks.TESTNET : StellarSdk.Networks.PUBLIC,
-            }
-        ).addOperation(
-            StellarSdk.Operation.createAccount({
-                destination: to,
-                startingBalance: DecimalsHelper.divide(
-                    amount,
-                    DecimalsHelper.pow(10, this.asset.decimals)
-                ).toString(),
-            })
-        ).setTimeout(60 * 5); // 5 minutes in seconds
-
-        const builtInnerTransaction = innerTransaction.build();
-
-        // User signs the inner transaction
-        builtInnerTransaction.sign(senderKey);
-
-        // Step 2: Gas station creates fee-bump transaction
-        const feeBumpTransaction = StellarSdk.TransactionBuilder.buildFeeBumpTransaction(
-            gasStationKey.publicKey(),
-            StellarSdk.BASE_FEE,
-            builtInnerTransaction,
-            this.networkObject.isTest ? StellarSdk.Networks.TESTNET : StellarSdk.Networks.PUBLIC
-        );
-
-        // Gas station signs the fee-bump transaction
-        feeBumpTransaction.sign(gasStationKey);
-
-        return feeBumpTransaction;
+        return await this.buildAndSignFeeBumpTransaction(dto, privateKey, secondPrivateKey, operation);
     }
 
     async getSignedPaymentTransaction(
         dto: SignTransactionDto,
         privateKey: string,
         secondPrivateKey?: string
-    ) {
+    ): Promise<StellarSdk.FeeBumpTransaction | StellarSdk.Transaction> {
         const { amount, to } = dto;
-        const senderKey = StellarSdk.Keypair.fromSecret(privateKey);
-        const gasStationKey = StellarSdk.Keypair.fromSecret(secondPrivateKey);
 
+        const operation = StellarSdk.Operation.payment({
+            destination: to,
+            asset: StellarSdk.Asset.native(),
+            amount: DecimalsHelper.divide(
+                amount,
+                DecimalsHelper.pow(10, this.asset.decimals)
+            ).toString(),
+        });
+
+        return await this.buildAndSignFeeBumpTransaction(dto, privateKey, secondPrivateKey, operation);
+    }
+
+    private async buildAndSignFeeBumpTransaction(
+        dto: SignTransactionDto,
+        privateKey: string,
+        secondPrivateKey: string | null | undefined,
+        operation: any
+    ): Promise<StellarSdk.FeeBumpTransaction | StellarSdk.Transaction> {
+        const senderKey = StellarSdk.Keypair.fromSecret(privateKey);
+
+        // Load the source account
         const senderAccount: StellarSdk.Account = await this.horizonServer.loadAccount(senderKey.publicKey());
 
-        // Step 1: User builds and signs the inner transaction with minimal fee
-        const innerTransaction = new StellarSdk.TransactionBuilder(senderAccount, {
+        // Build the transaction
+        const transactionBuilder = new StellarSdk.TransactionBuilder(senderAccount, {
             fee: StellarSdk.BASE_FEE,
             networkPassphrase: this.networkObject.isTest ? StellarSdk.Networks.TESTNET : StellarSdk.Networks.PUBLIC,
         })
-            .addOperation(
-                StellarSdk.Operation.payment({
-                    destination: to,
-                    asset: StellarSdk.Asset.native(),
-                    amount: DecimalsHelper.divide(
-                        amount,
-                        DecimalsHelper.pow(10, this.asset.decimals)
-                    ).toString(),
-                })
-            )
+            .addOperation(operation)
             .setTimeout(60 * 5); // 5 minutes in seconds
 
-        const builtInnerTransaction = innerTransaction.build();
+        const transaction = transactionBuilder.build();
 
-        // User signs the inner transaction
-        builtInnerTransaction.sign(senderKey);
+        // Sign the transaction with the source account's secret key
+        transaction.sign(senderKey);
 
-        // Step 2: Gas station creates fee-bump transaction
-        const feeBumpTransaction = StellarSdk.TransactionBuilder.buildFeeBumpTransaction(
-            gasStationKey.publicKey(),
-            StellarSdk.BASE_FEE,
-            builtInnerTransaction,
-            this.networkObject.isTest ? StellarSdk.Networks.TESTNET : StellarSdk.Networks.PUBLIC
-        );
+        // If secondPrivateKey is provided, create a fee-bump transaction
+        if (secondPrivateKey) {
+            const gasStationKey = StellarSdk.Keypair.fromSecret(secondPrivateKey);
 
-        // Gas station signs the fee-bump transaction
-        feeBumpTransaction.sign(gasStationKey);
+            // Create fee-bump transaction
+            const feeBumpTransaction = StellarSdk.TransactionBuilder.buildFeeBumpTransaction(
+                gasStationKey.publicKey(),
+                StellarSdk.BASE_FEE,
+                transaction,
+                this.networkObject.isTest ? StellarSdk.Networks.TESTNET : StellarSdk.Networks.PUBLIC
+            );
 
-        return feeBumpTransaction;
+            // Gas station signs the fee-bump transaction
+            feeBumpTransaction.sign(gasStationKey);
+
+            return feeBumpTransaction;
+        }
+
+        // Return the single-signed transaction if no secondPrivateKey
+        return transaction;
     }
 
     //  if the account does not exist, it is a create account operation
@@ -198,6 +186,9 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
             if (error.response.status == 404) {
                 return false;
             }
+
+            this.logger.notification(`Error in checking existing account on stellar ${error.stack ?? error.message} - ${softJsonStringify(error)} `)
+            throw error;
         }
     }
 
@@ -205,8 +196,8 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
         dto: SignTransactionDto,
         privateKey: string,
         secondPrivateKey?: string
-    ) {
-        return null;
+    ): Promise<StellarSdk.FeeBumpTransaction | StellarSdk.Transaction> {
+        throw new Error('Tokens in stellar are not supported yet')
     }
 
     getSignedSwapTransaction(dto: SignTransactionDto, privateKey: string): Promise<CustodySignedTransaction> {
