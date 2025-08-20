@@ -48,7 +48,7 @@
     "@slack/webhook": "^7.0.4",
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.91.7",
-    "@stellar/stellar-sdk": "^11.3.0",
+    "@stellar/stellar-sdk": "^13.3.0",
     "@terra-money/terra.js": "^3.1.10",
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.3",
