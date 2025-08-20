@@ -111,9 +111,9 @@ export class PolkadotStrategyService implements IBlockChainPrivateServer {
         const decimalAmount = new Decimal(amount);
         const nonce = await this.api.rpc.system.accountNextIndex(sender.address);
         const transfer = this.api.tx.balances.transferKeepAlive(to, decimalAmount.toJSON());
-        const signedTx = await transfer.signAsync(sender, { nonce });
-        const currentBlock = (await this.api.rpc.chain.getHeader()).number.toNumber();
         const eraPeriod = 64;
+        const signedTx = await transfer.signAsync(sender, { nonce, era: eraPeriod });
+        const currentBlock = (await this.api.rpc.chain.getHeader()).number.toNumber();
         const validityStart = currentBlock - (currentBlock % eraPeriod);
         const validityEnd = validityStart + eraPeriod;
 
