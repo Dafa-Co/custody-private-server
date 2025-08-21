@@ -12,6 +12,7 @@ import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/c
 import { AccountResponse } from "@stellar/stellar-sdk/lib/horizon";
 import { DecimalsHelper } from "rox-custody_common-modules/libs/utils/decimals-helper";
 import { SignerTypeEnum } from "rox-custody_common-modules/libs/enums/signer-type.enum";
+import { getSignerFromSigners } from "src/utils/helpers/get-signer-from-signers.helper";
 
 
 @Injectable()
@@ -47,15 +48,11 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
         const { transactionId, signers } = dto;
 
         try {
-            const sender = signers.find((s) => s.type === SignerTypeEnum.SENDER);
-                        
-            if (!sender) {
-                throw new BadRequestException('Stellar transaction must have a signer of type "SENDER"');
-            }
+            const sender = getSignerFromSigners(signers, SignerTypeEnum.SENDER, true);
 
             const senderPrivateKey = sender.privateKey;
 
-            const payer = signers.find((s) => s.type === SignerTypeEnum.PAYER);
+            const payer = getSignerFromSigners(signers, SignerTypeEnum.PAYER, true);
             const payerPrivateKey = payer ? payer.privateKey : undefined;
 
             const signedTransaction: StellarSdk.FeeBumpTransaction | StellarSdk.Transaction =

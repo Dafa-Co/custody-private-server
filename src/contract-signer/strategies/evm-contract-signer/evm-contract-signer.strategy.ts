@@ -5,6 +5,7 @@ import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/li
 import { IContractSignerStrategy } from '../contract-signer-strategy.interface';
 import { IPrivateKeyFilledSignEVMContractTransaction, ISignEVMContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
+import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
 
 @Injectable()
 export class EVMContractSignerStrategy implements IContractSignerStrategy {
@@ -23,11 +24,7 @@ export class EVMContractSignerStrategy implements IContractSignerStrategy {
   ): Promise<ICustodySignedContractTransaction> {
     const { data, gas, gasPrice } = dto;
 
-    const sender = dto.signers.find((s) => s.type === SignerTypeEnum.PAYER);
-
-    if (!sender) {
-      throw new BadRequestException('EVM contract transaction must have a signer of type "SENDER"');
-    }
+    const sender = getSignerFromSigners(dto.signers, SignerTypeEnum.PAYER, true);
 
     const privateKey = sender.privateKey;
 

@@ -17,6 +17,7 @@ import { SignedTransaction as SignedTronTransaction } from 'tronweb/src/types/Tr
 import { BadRequestException, Injectable } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
+import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
 
 const tronHeaders = { 'TRON-PRO-API-KEY': configs.TRON_API_KEY };
 
@@ -59,11 +60,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
       transactionId,
     } = dto;
     try {
-      const sender = dto.signers.find((s) => s.type === SignerTypeEnum.SENDER);
-
-      if (!sender) {
-        throw new BadRequestException('Tron transaction must have a signer of type "SENDER"');
-      }
+      const sender = getSignerFromSigners(dto.signers, SignerTypeEnum.SENDER, true);
 
       const privateKey = sender.privateKey;
       

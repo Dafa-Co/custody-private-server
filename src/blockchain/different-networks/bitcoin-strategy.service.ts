@@ -12,6 +12,7 @@ import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/globa
 import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
 import Decimal from 'decimal.js';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
+import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
 
 
 @Injectable()
@@ -151,11 +152,7 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
     const { amount, to, transactionId, signers } = dto;
 
     try {
-      const sender = signers.find((s) => s.type === SignerTypeEnum.SENDER);
-    
-      if (!sender) {
-        throw new BadRequestException('EVM transaction must have a signer of type "SENDER"');
-      }
+      const sender = getSignerFromSigners(signers, SignerTypeEnum.SENDER, true);
   
       const privateKey = sender.privateKey;
 

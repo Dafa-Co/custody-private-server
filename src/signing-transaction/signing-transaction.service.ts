@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IPrivateKeyFilledTransactionSigner, PrivateKeyFilledSignTransactionDto, PrivateServerSignSwapTransactionDto, PrivateServerSignTransactionDto } from '../../rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import { IPrivateKeyFilledTransactionSigner, IPrivateServerTransactionSigner, PrivateKeyFilledSignTransactionDto, PrivateServerSignSwapTransactionDto, PrivateServerSignTransactionDto } from '../../rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import {
   CustodySignedTransaction,
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
@@ -18,24 +18,32 @@ export class SigningTransactionService {
     private readonly keyManagerService: KeysManagerService,
   ) { }
 
+  private async fillSignersPrivateKeys(
+    signers: IPrivateServerTransactionSigner[],
+    corporateId: number,
+  ): Promise<IPrivateKeyFilledTransactionSigner[]> {
+    return Promise.all(
+      signers.map(async (signer) => {
+        const privateKey = await this.keyManagerService.getFullPrivateKey(
+          signer.keyId,
+          signer.keyPart,
+          corporateId,
+        );
+
+        return {
+          ...signer,
+          privateKey,
+        };
+      }),
+    );
+  }
+
   async signTransaction(
     dto: PrivateServerSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
     const { asset, corporateId } = dto;
 
-    let signers: IPrivateKeyFilledTransactionSigner[] = [];
-    for (const signer of dto.signers) {
-      const privateKey = await this.keyManagerService.getFullPrivateKey(
-        signer.keyId,
-        signer.keyPart,
-        corporateId,
-      );
-
-      signers.push({
-        ...signer,
-        privateKey,
-      });
-    }
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
 
     const blockchainFactory =
       await this.blockchainFactoriesService.getStrategy(asset);
@@ -51,19 +59,7 @@ export class SigningTransactionService {
   ): Promise<ICustodySignedContractTransaction> {
     const { corporateId, networkId } = dto;
 
-    let signers: IPrivateKeyFilledTransactionSigner[] = [];
-    for (const signer of dto.signers) {
-      const privateKey = await this.keyManagerService.getFullPrivateKey(
-        signer.keyId,
-        signer.keyPart,
-        corporateId,
-      );
-
-      signers.push({
-        ...signer,
-        privateKey,
-      });
-    }
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
 
     const contractSignerStrategy =
       await this.contractSignerFactory.getContractSignerStrategy(networkId);
@@ -81,19 +77,7 @@ export class SigningTransactionService {
   ): Promise<CustodySignedTransaction> {
     const { asset, corporateId } = dto;
 
-    let signers: IPrivateKeyFilledTransactionSigner[] = [];
-    for (const signer of dto.signers) {
-      const privateKey = await this.keyManagerService.getFullPrivateKey(
-        signer.keyId,
-        signer.keyPart,
-        corporateId,
-      );
-
-      signers.push({
-        ...signer,
-        privateKey,
-      });
-    }
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
 
     const blockchainFactory =
       await this.blockchainFactoriesService.getStrategy(asset);

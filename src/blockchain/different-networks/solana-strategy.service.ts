@@ -35,6 +35,7 @@ import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/c
 import { softJsonStringify } from 'rox-custody_common-modules/libs/utils/soft-json-stringify.utils';
 import Decimal from 'decimal.js';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
+import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
 
 @Injectable()
 export class SolanaStrategyService implements IBlockChainPrivateServer {
@@ -68,15 +69,11 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         const { amount, to, transactionId, signers } = dto;
 
         try {
-            const sender = signers.find((s) => s.type === SignerTypeEnum.SENDER);
-            
-            if (!sender) {
-                throw new BadRequestException('Solana transaction must have a signer of type "SENDER"');
-            }
+            const sender = getSignerFromSigners(signers, SignerTypeEnum.SENDER, true);
 
             const senderPrivateKey = sender.privateKey;
 
-            const payer = signers.find((s) => s.type === SignerTypeEnum.PAYER);
+            const payer = getSignerFromSigners(signers, SignerTypeEnum.PAYER);
             const payerPrivateKey = payer ? payer.privateKey : undefined;
 
             let signedTransaction: SignedSolanaTransaction;

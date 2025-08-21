@@ -11,6 +11,7 @@ import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-js
 import Decimal from "decimal.js";
 import BigNumber from 'bignumber.js'
 import { SignerTypeEnum } from "rox-custody_common-modules/libs/enums/signer-type.enum";
+import { getSignerFromSigners } from "src/utils/helpers/get-signer-from-signers.helper";
 
 @Injectable()
 export class XrpStrategyService implements IBlockChainPrivateServer {
@@ -45,11 +46,7 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
         const { amount, to, transactionId } = dto;
 
         try {
-            const sender = dto.signers.find((s) => s.type === SignerTypeEnum.SENDER);
-
-            if (!sender) {
-                throw new BadRequestException('Xrp transaction must have a signer of type "SENDER"');
-            }
+            const sender = getSignerFromSigners(dto.signers, SignerTypeEnum.SENDER, true);
 
             const privateKey = sender.privateKey;
             
