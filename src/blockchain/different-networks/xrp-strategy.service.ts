@@ -1,7 +1,7 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from "../interfaces/blockchain.interface";
 import { CustodySignedTransaction, SignedXrpTransaction } from "rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type";
-import { PrivateServerSignTransactionDto, SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
+import { PrivateKeyFilledSignTransactionDto, PrivateServerSignTransactionDto, SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
 import { getChainFromNetwork } from "rox-custody_common-modules/blockchain/global-commons/get-network-chain";
 import { AssetType, CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
 import { Chain } from "viem";
@@ -10,6 +10,8 @@ import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/c
 import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-json-stringify.utils";
 import Decimal from "decimal.js";
 import BigNumber from 'bignumber.js'
+import { SignerTypeEnum } from "rox-custody_common-modules/libs/enums/signer-type.enum";
+import { getSignerFromSigners } from "src/utils/helpers/get-signer-from-signers.helper";
 
 @Injectable()
 export class XrpStrategyService implements IBlockChainPrivateServer {
@@ -39,13 +41,15 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
     }
 
     async getSignedTransaction(
-        dto: PrivateServerSignTransactionDto,
-        privateKey: string,
-        secondPrivateKey: string = null,
+        dto: PrivateKeyFilledSignTransactionDto,
     ): Promise<CustodySignedTransaction> {
         const { amount, to, transactionId } = dto;
 
         try {
+            const sender = getSignerFromSigners(dto.signers, SignerTypeEnum.SENDER, true);
+
+            const privateKey = sender.privateKey;
+            
             let signedTransaction: SignedXrpTransaction;
 
             switch (this.asset.type) {
@@ -114,7 +118,7 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
         } as SignedXrpTransaction;
     }
 
-    getSignedSwapTransaction(dto: SignTransactionDto, privateKey: string): Promise<CustodySignedTransaction> {
+    getSignedSwapTransaction(dto: SignTransactionDto): Promise<CustodySignedTransaction> {
         throw new Error("Method not implemented.");
     }
 }
