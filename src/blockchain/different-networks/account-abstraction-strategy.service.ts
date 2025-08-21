@@ -21,8 +21,8 @@ import {
   SignedTransaction,
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { secretsTypes, throwOrReturn } from 'account-abstraction.secret';
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { PrivateServerSignSwapTransactionDto, PrivateServerSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { PrivateKeyFilledSignSwapTransactionDto, PrivateKeyFilledSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 const abi = require('erc-20-abi');
@@ -30,6 +30,7 @@ import { Web3 } from 'web3';
 import { EvmHelper } from 'src/utils/helpers/evm-helper';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { HexString } from 'rox-custody_common-modules/libs/types/hex-string.type';
+import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 
 @Injectable()
 export class AccountAbstractionStrategyService
@@ -188,6 +189,7 @@ export class AccountAbstractionStrategyService
           attempt + 1,
         );
       } else {
+        console.log('errror', error);
         this.logger.error('Error in buildUserOp after retries:', error);
         return null; // Return null or throw depending on your error handling strategy
       }
@@ -195,11 +197,21 @@ export class AccountAbstractionStrategyService
   }
 
   async getSignedTransaction(
-    dto: PrivateServerSignTransactionDto,
-    privateKey: string,
+    dto: PrivateKeyFilledSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { amount, asset, keyId, to, transactionId } =
+    const { amount, asset, to, transactionId, signers } =
       dto;
+
+    const sender = signers.find((s) => s.type === SignerTypeEnum.SENDER);
+
+    if (!sender) {
+      throw new BadRequestException('EVM transaction must have a signer of type "SENDER"');
+    }
+
+    const keyId = sender.keyId;
+    const privateKey = sender.privateKey;
+
+    console.log('privateKey', privateKey);
 
     const [nonce] = await Promise.all([
       this.nonceManager.getNonce(keyId, asset.networkId),
@@ -238,12 +250,21 @@ export class AccountAbstractionStrategyService
 
 
   async getSignedSwapTransaction(
-    dto: PrivateServerSignSwapTransactionDto,
-    privateKey: string
+    dto: PrivateKeyFilledSignSwapTransactionDto,
   ): Promise<CustodySignedTransaction> {
     try {
-      const { keyId, transactionId, swapTransaction } = dto;
+      const { transactionId, swapTransaction, signers } = dto;
       const { permit2 } = swapTransaction;
+
+      const sender = signers.find((s) => s.type === SignerTypeEnum.SENDER);
+
+      if (!sender) {
+        throw new BadRequestException('EVM swap transaction must have a signer of type "SENDER"');
+      }
+
+      const keyId = sender.keyId;
+      const privateKey = sender.privateKey;
+
       // Extract transaction parameters
       const txParams = this.extractTransactionParams(swapTransaction);
 

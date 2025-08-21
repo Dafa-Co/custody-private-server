@@ -7,10 +7,11 @@ import axios, { AxiosInstance } from 'axios';
 import { UTXO } from 'src/utils/types/utxos';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from 'src/blockchain/interfaces/blockchain.interface';
-import { PrivateServerSignTransactionDto, } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import { PrivateKeyFilledSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
 import Decimal from 'decimal.js';
+import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 
 
 @Injectable()
@@ -145,12 +146,19 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
   }
 
   async getSignedTransaction(
-    dto: PrivateServerSignTransactionDto,
-    privateKey: string,
+    dto: PrivateKeyFilledSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { amount, to, transactionId } = dto;
+    const { amount, to, transactionId, signers } = dto;
 
     try {
+      const sender = signers.find((s) => s.type === SignerTypeEnum.SENDER);
+    
+      if (!sender) {
+        throw new BadRequestException('EVM transaction must have a signer of type "SENDER"');
+      }
+  
+      const privateKey = sender.privateKey;
+
       // Step 1: Reconstruct the key pair from the private key
       const keyPair = this.ECPair.fromWIF(privateKey, this.bitcoinNetwork);
 
@@ -303,7 +311,7 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
     }
   }
 
-  async getSignedSwapTransaction(dto: any, privateKey: string): Promise<any> {
+  async getSignedSwapTransaction(dto: any): Promise<any> {
     throw new Error('Method not implemented.');
   }
 }

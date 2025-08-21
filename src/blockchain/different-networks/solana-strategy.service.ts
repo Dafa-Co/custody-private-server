@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import {
     IBlockChainPrivateServer,
     InitBlockChainPrivateServerStrategies,
@@ -9,6 +9,7 @@ import {
     SignedSolanaTransaction,
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import {
+    PrivateKeyFilledSignTransactionDto,
     PrivateServerSignTransactionDto,
 } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
@@ -33,6 +34,7 @@ import {
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { softJsonStringify } from 'rox-custody_common-modules/libs/utils/soft-json-stringify.utils';
 import Decimal from 'decimal.js';
+import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 
 @Injectable()
 export class SolanaStrategyService implements IBlockChainPrivateServer {
@@ -61,30 +63,39 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     }
 
     async getSignedTransaction(
-        dto: PrivateServerSignTransactionDto,
-        privateKey: string,
-        secondPrivateKey: string = null,
+        dto: PrivateKeyFilledSignTransactionDto,
     ): Promise<CustodySignedTransaction> {
-        const { amount, to, transactionId } = dto;
+        const { amount, to, transactionId, signers } = dto;
 
         try {
+            const sender = signers.find((s) => s.type === SignerTypeEnum.SENDER);
+            
+            if (!sender) {
+                throw new BadRequestException('Solana transaction must have a signer of type "SENDER"');
+            }
+
+            const senderPrivateKey = sender.privateKey;
+
+            const payer = signers.find((s) => s.type === SignerTypeEnum.PAYER);
+            const payerPrivateKey = payer ? payer.privateKey : undefined;
+
             let signedTransaction: SignedSolanaTransaction;
 
             switch (this.asset.type) {
                 case AssetType.COIN:
                     signedTransaction = await this.getSignedTransactionCoin(
-                        privateKey,
+                        senderPrivateKey,
                         to,
                         amount,
-                        secondPrivateKey,
+                        payerPrivateKey,
                     );
                     break;
                 case AssetType.TOKEN:
                     signedTransaction = await this.getSignedTransactionToken(
-                        privateKey,
+                        senderPrivateKey,
                         to,
                         amount,
-                        secondPrivateKey,
+                        payerPrivateKey,
                     );
                     break;
             }
@@ -237,7 +248,6 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
 
     async getSignedSwapTransaction(
         dto: any,
-        privateKey: string,
     ): Promise<any> {
         // Solana does not support swap transactions in the same way as other blockchains.
         throw new Error('Solana does not support swap transactions.');

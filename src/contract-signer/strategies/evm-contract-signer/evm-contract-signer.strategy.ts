@@ -1,9 +1,10 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import Web3 from 'web3';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
-import { SignContractTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
 import { IContractSignerStrategy } from '../contract-signer-strategy.interface';
+import { IPrivateKeyFilledSignEVMContractTransaction, ISignEVMContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
+import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 
 @Injectable()
 export class EVMContractSignerStrategy implements IContractSignerStrategy {
@@ -18,10 +19,17 @@ export class EVMContractSignerStrategy implements IContractSignerStrategy {
   }
 
   async signContractTransaction(
-    dto: SignContractTransactionDto,
-    privateKey: string,
+    dto: IPrivateKeyFilledSignEVMContractTransaction,
   ): Promise<ICustodySignedContractTransaction> {
     const { data, gas, gasPrice } = dto;
+
+    const sender = dto.signers.find((s) => s.type === SignerTypeEnum.PAYER);
+
+    if (!sender) {
+      throw new BadRequestException('EVM contract transaction must have a signer of type "SENDER"');
+    }
+
+    const privateKey = sender.privateKey;
 
     const account = this.web3.eth.accounts.privateKeyToAccount(privateKey);
 
