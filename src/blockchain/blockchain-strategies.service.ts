@@ -48,7 +48,6 @@ export class BlockchainFactoriesService {
         break;
 
       case NetworkCategory.Solana:
-      case NetworkCategory.RoxChain:
         strategy = new SolanaStrategyService();
         break;
 
