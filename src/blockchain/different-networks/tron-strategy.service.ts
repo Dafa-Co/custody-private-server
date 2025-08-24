@@ -1,4 +1,4 @@
-import { PrivateServerSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import { PrivateKeyFilledSignTransactionDto, PrivateServerSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import {
   IBlockChainPrivateServer,
   InitBlockChainPrivateServerStrategies,
@@ -14,8 +14,10 @@ import {
 import { AssetType, CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
 import configs from 'src/configs/configs';
 import { SignedTransaction as SignedTronTransaction } from 'tronweb/src/types/Transaction';
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import Decimal from 'decimal.js';
+import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
+import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
 
 const tronHeaders = { 'TRON-PRO-API-KEY': configs.TRON_API_KEY };
 
@@ -50,8 +52,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   }
 
   async getSignedTransaction(
-    dto: PrivateServerSignTransactionDto,
-    privateKey: string,
+    dto: PrivateKeyFilledSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
     const {
       amount,
@@ -59,6 +60,10 @@ export class TronStrategyService implements IBlockChainPrivateServer {
       transactionId,
     } = dto;
     try {
+      const sender = getSignerFromSigners(dto.signers, SignerTypeEnum.SENDER, true);
+
+      const privateKey = sender.privateKey;
+      
       this.tronWeb.setPrivateKey(privateKey);
       const signedTransaction =
         this.asset.type === AssetType.COIN
@@ -136,7 +141,6 @@ export class TronStrategyService implements IBlockChainPrivateServer {
 
   async getSignedSwapTransaction(
     dto: any,
-    privateKey: string,
   ): Promise<any> {
     // Tron does not support swap transactions in the same way as other blockchains.
     throw new Error('Tron does not support swap transactions.');
