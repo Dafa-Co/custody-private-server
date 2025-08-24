@@ -1,9 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from "../interfaces/blockchain.interface";
 import { AssetType, CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
 import { Chain } from "viem";
 import { CustodySignedTransaction } from "rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type";
-import { SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
+import { PrivateKeyFilledSignSwapTransactionDto, PrivateKeyFilledSignTransactionDto, SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { HorizonServer } from "@stellar/stellar-sdk/lib/horizon/server";
 import { getChainFromNetwork, networkData } from "rox-custody_common-modules/blockchain/global-commons/get-network-chain";
@@ -11,6 +11,8 @@ import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-js
 import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/custody-logger.service";
 import { AccountResponse } from "@stellar/stellar-sdk/lib/horizon";
 import { DecimalsHelper } from "rox-custody_common-modules/libs/utils/decimals-helper";
+import { SignerTypeEnum } from "rox-custody_common-modules/libs/enums/signer-type.enum";
+import { getSignerFromSigners } from "src/utils/helpers/get-signer-from-signers.helper";
 
 
 @Injectable()
@@ -41,17 +43,22 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
     }
 
     async getSignedTransaction(
-        dto: SignTransactionDto,
-        privateKey: string,
-        secondPrivateKey?: string
+        dto: PrivateKeyFilledSignTransactionDto,
     ): Promise<CustodySignedTransaction> {
-        const { transactionId } = dto;
+        const { transactionId, signers } = dto;
 
         try {
+            const sender = getSignerFromSigners(signers, SignerTypeEnum.SENDER, true);
+
+            const senderPrivateKey = sender.privateKey;
+
+            const payer = getSignerFromSigners(signers, SignerTypeEnum.PAYER, true);
+            const payerPrivateKey = payer ? payer.privateKey : undefined;
+
             const signedTransaction: StellarSdk.FeeBumpTransaction | StellarSdk.Transaction =
                 this.asset.type === AssetType.COIN
-                    ? await this.getSignedTransactionCoin(dto, privateKey, secondPrivateKey)
-                    : await this.getSignedTransactionToken(dto, privateKey, secondPrivateKey);
+                    ? await this.getSignedTransactionCoin(dto, senderPrivateKey, payerPrivateKey)
+                    : await this.getSignedTransactionToken(dto, senderPrivateKey, payerPrivateKey);
 
             // Convert the transaction to XDR string for safe JSON serialization
             const transactionXdr = signedTransaction.toXDR();
@@ -79,15 +86,15 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
 
     async getSignedTransactionCoin(
         dto: SignTransactionDto,
-        privateKey: string,
-        secondPrivateKey?: string
+        senderPrivateKey: string,
+        payerPrivateKey?: string
     ): Promise<StellarSdk.FeeBumpTransaction | StellarSdk.Transaction> {
         const { to } = dto;
 
         if (await this.isExistingAccount(to)) {
-            return await this.getSignedPaymentTransaction(dto, privateKey, secondPrivateKey);
+            return await this.getSignedPaymentTransaction(dto, senderPrivateKey, payerPrivateKey);
         } else {
-            return await this.getSignedCreateAccountTransaction(dto, privateKey, secondPrivateKey);
+            return await this.getSignedCreateAccountTransaction(dto, senderPrivateKey, payerPrivateKey);
         }
     }
 
@@ -111,8 +118,8 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
 
     async getSignedPaymentTransaction(
         dto: SignTransactionDto,
-        privateKey: string,
-        secondPrivateKey?: string
+        senderPrivateKey: string,
+        payerPrivateKey?: string
     ): Promise<StellarSdk.FeeBumpTransaction | StellarSdk.Transaction> {
         const { amount, to } = dto;
 
@@ -125,16 +132,16 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
             ).toString(),
         });
 
-        return await this.buildAndSignFeeBumpTransaction(dto, privateKey, secondPrivateKey, operation);
+        return await this.buildAndSignFeeBumpTransaction(dto, senderPrivateKey, payerPrivateKey, operation);
     }
 
     private async buildAndSignFeeBumpTransaction(
         dto: SignTransactionDto,
-        privateKey: string,
-        secondPrivateKey: string | null | undefined,
+        senderPrivateKey: string,
+        payerPrivateKey: string | null | undefined,
         operation: any
     ): Promise<StellarSdk.FeeBumpTransaction | StellarSdk.Transaction> {
-        const senderKey = StellarSdk.Keypair.fromSecret(privateKey);
+        const senderKey = StellarSdk.Keypair.fromSecret(senderPrivateKey);
 
         // Load the source account
         const senderAccount: StellarSdk.Account = await this.horizonServer.loadAccount(senderKey.publicKey());
@@ -152,9 +159,9 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
         // Sign the transaction with the source account's secret key
         transaction.sign(senderKey);
 
-        // If secondPrivateKey is provided, create a fee-bump transaction
-        if (secondPrivateKey) {
-            const gasStationKey = StellarSdk.Keypair.fromSecret(secondPrivateKey);
+        // If payerPrivateKey is provided, create a fee-bump transaction
+        if (payerPrivateKey) {
+            const gasStationKey = StellarSdk.Keypair.fromSecret(payerPrivateKey);
 
             // Create fee-bump transaction
             const feeBumpTransaction = StellarSdk.TransactionBuilder.buildFeeBumpTransaction(
@@ -170,7 +177,7 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
             return feeBumpTransaction;
         }
 
-        // Return the single-signed transaction if no secondPrivateKey
+        // Return the single-signed transaction if no payerPrivateKey
         return transaction;
     }
 
@@ -193,14 +200,14 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
     }
 
     async getSignedTransactionToken(
-        dto: SignTransactionDto,
-        privateKey: string,
-        secondPrivateKey?: string
+        dto: PrivateKeyFilledSignTransactionDto,
+        senderPrivateKey: string,
+        payerPrivateKey?: string
     ): Promise<StellarSdk.FeeBumpTransaction | StellarSdk.Transaction> {
         throw new Error('Tokens in stellar are not supported yet')
     }
 
-    getSignedSwapTransaction(dto: SignTransactionDto, privateKey: string): Promise<CustodySignedTransaction> {
+    getSignedSwapTransaction(dto: any): Promise<CustodySignedTransaction> {
         throw new Error("Method not implemented.");
     }
 }
