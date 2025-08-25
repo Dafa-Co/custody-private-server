@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import Web3 from 'web3';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
-import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
+import { ICustodySignedContractTransaction, ICustodySignedEVMContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
 import { IContractSignerStrategy } from '../contract-signer-strategy.interface';
 import { IPrivateKeyFilledSignEVMContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
@@ -21,7 +21,7 @@ export class EVMContractSignerStrategy implements IContractSignerStrategy {
 
   async signContractTransaction(
     dto: IPrivateKeyFilledSignEVMContractTransaction,
-  ): Promise<ICustodySignedContractTransaction> {
+  ): Promise<ICustodySignedEVMContractTransaction> {
     const { data, gas, gasPrice } = dto;
 
     const sender = getSignerFromSigners(dto.signers, SignerTypeEnum.PAYER, true);
