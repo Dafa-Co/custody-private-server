@@ -1,7 +1,6 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import Web3 from 'web3';
+import { Injectable } from '@nestjs/common';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
-import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
+import { ICustodySignedSolanaContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
 import { IContractSignerStrategy } from '../contract-signer-strategy.interface';
 import { IPrivateKeyFilledSignSolanaContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
@@ -13,8 +12,8 @@ import {
   PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
 } from "@metaplex-foundation/mpl-token-metadata";
 import { createAssociatedTokenAccountInstruction, createInitializeMintInstruction, createMintToInstruction, getAssociatedTokenAddress, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
 import { IPrivateKeyFilledTransactionSigner } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import bs58 from 'bs58';
 
 @Injectable()
 export class SolanaContractSignerStrategy implements IContractSignerStrategy {
@@ -215,7 +214,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
 
   async signContractTransaction(
     dto: IPrivateKeyFilledSignSolanaContractTransaction,
-  ): Promise<ICustodySignedContractTransaction> {
+  ): Promise<ICustodySignedSolanaContractTransaction> {
     const { payerKeyPair, ownerKeyPair, mintKeyPair } = this.prepareSigners(dto.signers);
 
     const transaction = await this.buildTransaction(dto, payerKeyPair, mintKeyPair, ownerKeyPair);
@@ -224,7 +223,13 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
 
     const rawTx = transaction.serialize();
 
+    const sigBase64 = transaction.signature.toString("base64");
+    const sigBytes = Buffer.from(sigBase64, "base64");
+    const sigBase58 = bs58.encode(new Uint8Array(sigBytes));
+
     return {
+      transactionHash: sigBase58,
+      contractAddress: mintKeyPair.publicKey.toBase58(),
       signedTransaction: rawTx,
       error: null,
     };
