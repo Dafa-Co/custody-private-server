@@ -14,6 +14,7 @@ import {
 import { createAssociatedTokenAccountInstruction, createInitializeMintInstruction, createMintToInstruction, getAssociatedTokenAddress, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { IPrivateKeyFilledTransactionSigner } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import bs58 from 'bs58';
+import Decimal from 'decimal.js';
 
 @Injectable()
 export class SolanaContractSignerStrategy implements IContractSignerStrategy {
@@ -156,7 +157,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
       mintKeypair.publicKey,
       recipientATAPublicKey,
       ownerKeyPair.publicKey,
-      dto.initialSupply,
+      BigInt(dto.initialSupply.toString()),
     ));
 
     instructions.push(this.createMetadataInstruction(
@@ -227,10 +228,13 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     const sigBytes = Buffer.from(sigBase64, "base64");
     const sigBase58 = bs58.encode(new Uint8Array(sigBytes));
 
+    const estimatedFee = await transaction.getEstimatedFee(this.connection);
+
     return {
       transactionHash: sigBase58,
       contractAddress: mintKeyPair.publicKey.toBase58(),
       signedTransaction: rawTx,
+      estimatedFee: new Decimal(estimatedFee),
       error: null,
     };
   }
