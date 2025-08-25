@@ -46,7 +46,7 @@ export class SigningTransactionService {
     const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
 
     const blockchainFactory =
-      await this.blockchainFactoriesService.getStrategy(asset);
+      await this.blockchainFactoriesService.getStrategy(asset, 0);
 
     return await blockchainFactory.getSignedTransaction({
       ...dto,
@@ -80,7 +80,7 @@ export class SigningTransactionService {
     const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
 
     const blockchainFactory =
-      await this.blockchainFactoriesService.getStrategy(asset);
+      await this.blockchainFactoriesService.getStrategy(asset, 0);
 
     return await blockchainFactory.getSignedSwapTransaction({
       ...dto,

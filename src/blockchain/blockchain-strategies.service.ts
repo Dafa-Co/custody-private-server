@@ -13,6 +13,7 @@ import { SolanaStrategyService } from './different-networks/solana-strategy.serv
 import { XrpStrategyService } from './different-networks/xrp-strategy.service';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { StellarStrategyService } from './different-networks/stellar-strategy.service';
+import { WalletProtocols } from 'rox-custody_common-modules/libs/enums/wallets-protocols.enum';
 
 @Injectable()
 export class BlockchainFactoriesService {
@@ -23,7 +24,7 @@ export class BlockchainFactoriesService {
     private readonly logger: CustodyLogger
   ) { }
 
-  async getStrategy(asset: CommonAsset): Promise<IBlockChainPrivateServer> {
+  async getStrategy(asset: CommonAsset, protocol: WalletProtocols): Promise<IBlockChainPrivateServer> {
     this.asset = asset;
     let strategy: IBlockChainPrivateServer;
 
