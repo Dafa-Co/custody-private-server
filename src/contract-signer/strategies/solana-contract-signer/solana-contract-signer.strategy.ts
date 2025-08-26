@@ -48,8 +48,6 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
       TOKEN_METADATA_PROGRAM_ID
     );
 
-    console.log('owner address in metadata instruction', ownerAddress.toBase58());
-
     return createCreateMetadataAccountV3Instruction(
       {
         metadata: metadataPDA,
@@ -186,8 +184,6 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
 
     // fungible token or NFT is considered as minting account
     const mintKeyPair = Keypair.generate();
-
-    console.log("token mint address", mintKeyPair.publicKey.toBase58());
 
     return { payerKeyPair, ownerKeyPair, mintKeyPair };
   }
