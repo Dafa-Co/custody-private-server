@@ -1,5 +1,5 @@
 import { CustodySignedTransaction, SignedPolkadotTransaction } from "rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type";
-import { PrivateServerSignTransactionDto, SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
+import { PrivateKeyFilledSignTransactionDto, PrivateServerSignTransactionDto, SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from "../interfaces/blockchain.interface";
 import { AssetType, CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
 import { Chain } from "viem";
@@ -18,6 +18,8 @@ import type { AccountInfo } from '@polkadot/types/interfaces';
 import { InternalServerErrorException } from "@nestjs/common";
 import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-json-stringify.utils";
 import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/custody-logger.service";
+import { getSignerFromSigners } from "src/utils/helpers/get-signer-from-signers.helper";
+import { SignerTypeEnum } from "rox-custody_common-modules/libs/enums/signer-type.enum";
 
 export class PolkadotStrategyService implements IBlockChainPrivateServer {
     private asset: CommonAsset;
@@ -57,22 +59,20 @@ export class PolkadotStrategyService implements IBlockChainPrivateServer {
     }
 
     async getSignedTransaction(
-        dto: PrivateServerSignTransactionDto,
-        privateKey: string,
-        secondPrivateKey: string = null,
+        dto: PrivateKeyFilledSignTransactionDto,
     ): Promise<CustodySignedTransaction> {
-        const { amount, to, transactionId, keyId } = dto;
+        const { amount, to, transactionId } = dto;
 
         try {
             let signedTransaction: SignedPolkadotTransaction;
+            const sender = getSignerFromSigners(dto.signers, SignerTypeEnum.SENDER, true);
 
             switch (this.asset.type) {
                 case AssetType.COIN:
                     signedTransaction = await this.getSignedTransactionCoin(
-                        privateKey,
+                        sender.privateKey,
                         to,
                         amount,
-                        keyId
                     );
                     break;
 
@@ -101,7 +101,6 @@ export class PolkadotStrategyService implements IBlockChainPrivateServer {
         privateKey: string,
         to: string,
         amount: Decimal,
-        keyId: number
     ): Promise<SignedPolkadotTransaction> {
         const keyring = new Keyring({ type: 'sr25519' });
         // Convert hex to Uint8Array
@@ -135,7 +134,10 @@ export class PolkadotStrategyService implements IBlockChainPrivateServer {
         };
     }
 
-    getSignedSwapTransaction(dto: SignTransactionDto, privateKey: string): Promise<CustodySignedTransaction> {
-        throw new Error("Method not implemented.");
+    async getSignedSwapTransaction(
+        dto: any,
+    ): Promise<any> {
+        // Solana does not support swap transactions in the same way as other blockchains.
+        throw new Error('Polkadot does not support swap transactions.');
     }
 }
