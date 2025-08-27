@@ -122,6 +122,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     
     let instructions: TransactionInstruction[] = [];
     
+    // create mint account (token account), with required balance (in lamports) for a token account
     instructions.push(SystemProgram.createAccount({
       fromPubkey: payerKeyPair.publicKey, // to pay for account creation
       newAccountPubkey: mintKeypair.publicKey, // token new address
@@ -130,6 +131,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
       programId: TOKEN_PROGRAM_ID,
     }));
 
+    // initialize the token, passing the token program ID (also an account), to bind this account to it (in order to be recognized as a token)
     instructions.push(createInitializeMintInstruction(
       mintKeypair.publicKey,
       dto.decimals,
@@ -138,12 +140,14 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
       TOKEN_PROGRAM_ID
     ));
 
+    // mathematically derive recipient Associated Token Account public key from the token public address and recipient public key
     const recipientATAPublicKey = await getAssociatedTokenAddress(
       mintKeypair.publicKey, // mint
       recipientAddress, // owner
       false
     );
 
+    // create recipient Associated Token Account
     instructions.push(createAssociatedTokenAccountInstruction(
       payerKeyPair.publicKey, // payer
       recipientATAPublicKey, // recipient associated token account
@@ -151,6 +155,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
       mintKeypair.publicKey // token mint address
     ));
 
+    // create mint to instruction, passing the owner key pair as the mint authority, minting initial suuply to the recipient
     instructions.push(createMintToInstruction(
       mintKeypair.publicKey,
       recipientATAPublicKey,
@@ -158,6 +163,8 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
       BigInt(dto.initialSupply.toString()),
     ));
 
+    // create metadata instruction to add name, symbol, and JSON URI (includes description and image)
+    // metaplex integrates with solana explorers to show this metadata in the token page
     instructions.push(this.createMetadataInstruction(
       dto,
       mintKeypair.publicKey,
@@ -165,12 +172,14 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
       payerKeyPair.publicKey
     ));
 
-    if (dto.isNFT)
+    if (dto.isNFT) {
+      // create master edition instruction, required for NFT token to mark it as NFT with max supply 1
       instructions.push(this.createMasterEditionInstruction(
         mintKeypair.publicKey,
         ownerKeyPair.publicKey,
         payerKeyPair.publicKey
       ));
+    }
 
     return instructions;
   }
