@@ -13,6 +13,7 @@ import { SolanaStrategyService } from './different-networks/solana-strategy.serv
 import { XrpStrategyService } from './different-networks/xrp-strategy.service';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { StellarStrategyService } from './different-networks/stellar-strategy.service';
+import { SuiStrategyService } from './different-networks/sui-strategy.service';
 
 @Injectable()
 export class BlockchainFactoriesService {
@@ -57,6 +58,10 @@ export class BlockchainFactoriesService {
 
       case NetworkCategory.Stellar:
         strategy = new StellarStrategyService(this.logger);
+        break;
+
+      case NetworkCategory.Sui:
+        strategy = new SuiStrategyService();
         break;
     }
 
