@@ -5,16 +5,21 @@ import {
   getChainFromNetwork,
 } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import { TronStrategyService } from './different-networks/tron-strategy.service';
-import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-commons/networks-gategory';
+import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-commons/networks-category';
 import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 import { Injectable } from '@nestjs/common';
 import { SolanaStrategyService } from './different-networks/solana-strategy.service';
 import { XrpStrategyService } from './different-networks/xrp-strategy.service';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
+<<<<<<< HEAD
 import { AccountAbstractionStrategyService } from './different-networks/account-abstraction/account-abstraction-strategy.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PrivateKeyVersion } from 'src/keys-manager/entities/private-key-version.entity';
 import { Repository } from 'typeorm';
+=======
+import { PolkadotStrategyService } from './different-networks/polkadot-strategy.service';
+import { StellarStrategyService } from './different-networks/stellar-strategy.service';
+>>>>>>> 7940657a529ea1219037fd258afb04bdd5a124b8
 
 @Injectable()
 export class BlockchainFactoriesService {
@@ -57,6 +62,14 @@ export class BlockchainFactoriesService {
 
       case NetworkCategory.Xrp:
         strategy = new XrpStrategyService();
+        break;
+
+      case NetworkCategory.Polkadot:
+        strategy = new PolkadotStrategyService();
+        break;
+        
+      case NetworkCategory.Stellar:
+        strategy = new StellarStrategyService(this.logger);
         break;
     }
 

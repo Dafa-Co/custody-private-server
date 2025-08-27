@@ -10,6 +10,7 @@ import { IdempotentKeyEntity } from './entities/idempotent-key.entity';
 import { isDefined } from 'class-validator';
 import { v4 as uuidv4 } from 'uuid';
 import { PrivateKeyVersion } from './entities/private-key-version.entity';
+import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 
 @Injectable()
 export class KeysManagerService {
@@ -21,6 +22,7 @@ export class KeysManagerService {
     private readonly blockchainFactoriesService: BlockchainFactoriesService,
     private corporateKey: CorporatePrivateKeysService,
     @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly logger: CustodyLogger,
   ) { }
 
   private getKeysParts(
@@ -57,7 +59,6 @@ export class KeysManagerService {
       })
       .orUpdate(['idempotentKey'])
       .execute();
-
 
     const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset);
     const wallet = await blockchainFactory.createWallet();

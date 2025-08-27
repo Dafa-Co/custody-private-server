@@ -7,10 +7,12 @@ import axios, { AxiosInstance } from 'axios';
 import { UTXO } from 'src/utils/types/utxos';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalletKeys } from 'src/blockchain/interfaces/blockchain.interface';
-import { PrivateServerSignTransactionDto, } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import { PrivateKeyFilledSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
 import Decimal from 'decimal.js';
+import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
+import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
 
 
 @Injectable()
@@ -20,6 +22,7 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
   private bitcoinNetwork: networks.Network;
   private ECPair: ECPairAPI;
   private api: AxiosInstance;
+  private apiOfMempoolSpace: AxiosInstance;
 
   constructor(
   ) {
@@ -43,6 +46,9 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
     this.api = axios.create({
       baseURL: `https://blockstream.info/${this.NetworkString}/api/`,
     });
+    this.apiOfMempoolSpace = axios.create({
+      baseURL: `https://mempool.space/${this.NetworkString}/api/`
+    })
   }
 
   async createWallet(): Promise<IWalletKeys> {
@@ -52,8 +58,8 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
     // Get the private key in Wallet Import Format (WIF)
     const privateKeyWIF = keyPair.toWIF();
 
-    // Derive the address from the public key
-    const { address } = payments.p2pkh({
+    // Derive the Native SegWit (P2WPKH) address from the public key (new default)
+    const { address } = payments.p2wpkh({
       pubkey: keyPair.publicKey,
       network: this.bitcoinNetwork,
     });
@@ -65,6 +71,22 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
     };
   }
 
+  private deriveAddressFromPubkey(pubkey: Buffer, type: 'p2pkh' | 'p2wpkh'): string {
+    if (type === 'p2wpkh') {
+      const { address } = payments.p2wpkh({
+        pubkey,
+        network: this.bitcoinNetwork,
+      });
+      return address!;
+    } else {
+      const { address } = payments.p2pkh({
+        pubkey,
+        network: this.bitcoinNetwork,
+      });
+      return address!;
+    }
+  }
+
   // Fetch current fee rate (in sat/vB) from a public API like mempool.space
   async getFeeRate(): Promise<number> {
     const response = await fetch(
@@ -74,48 +96,89 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
     return data.hourFee | 2; // Medium priority fee rate
   }
 
+  private async getAddressAndUTXOs(keyPair: ECPairInterface): Promise<{ address: string, addressType: 'p2pkh' | 'p2wpkh', utxos: UTXO[] }> {
+    const segwitAddress = this.deriveAddressFromPubkey(keyPair.publicKey, 'p2wpkh');
+    const utxos = await this.fetchUTXOs(segwitAddress);
+
+    if (utxos.length > 0) {
+      return { address: segwitAddress, addressType: 'p2wpkh', utxos };
+    }
+    const legacyAddress = this.deriveAddressFromPubkey(keyPair.publicKey, 'p2pkh');
+
+    const legacyUTXOs = await this.fetchUTXOs(legacyAddress);
+
+    if (legacyUTXOs.length > 0) {
+      return { address: legacyAddress, addressType: 'p2pkh', utxos: legacyUTXOs };
+    }
+
+    throw new BadRequestException('No UTXOs available for the address.');
+  }
+
+  private async processInput(psbt: Psbt, utxo: UTXO, addressType: 'p2pkh' | 'p2wpkh', keyPair: ECPairInterface) {
+    const txHex = await this.fetchTransactionHex(utxo.txid);
+
+    if (addressType === 'p2wpkh') {
+      // SegWit input
+      psbt.addInput({
+        hash: utxo.txid,
+        index: utxo.vout,
+        witnessUtxo: {
+          script: payments.p2wpkh({ pubkey: keyPair.publicKey, network: this.bitcoinNetwork }).output!,
+          value: Number(utxo.value),
+        },
+      });
+    } else {
+      // Legacy P2PKH input
+      psbt.addInput({
+        hash: utxo.txid,
+        index: utxo.vout,
+        nonWitnessUtxo: Buffer.from(txHex, 'hex'),
+      });
+    }
+  }
+
+  private getEstimatedTxSize(inputCount: number, outputCount: number, addressType: 'p2pkh' | 'p2wpkh'): number {
+    if (addressType === 'p2wpkh') {
+      return inputCount * 68 + outputCount * 31 + 11;
+    } else {
+      // Left as old way but we can add optimization for p2wpkh in the future
+      return inputCount * 148 + outputCount * 34 + 10;
+    }
+  }
 
   async getSignedTransaction(
-    dto: PrivateServerSignTransactionDto,
-    privateKey: string,
+    dto: PrivateKeyFilledSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { amount, to, transactionId } = dto;
+    const { amount, to, transactionId, signers } = dto;
 
     try {
+      const sender = getSignerFromSigners(signers, SignerTypeEnum.SENDER, true);
+  
+      const privateKey = sender.privateKey;
+
       // Step 1: Reconstruct the key pair from the private key
       const keyPair = this.ECPair.fromWIF(privateKey, this.bitcoinNetwork);
-      // Step 2: Derive the sender's address (fromAddress)
-      const { address: fromAddress } = payments.p2pkh({
-        pubkey: keyPair.publicKey,
-        network: this.bitcoinNetwork,
-      });
-      // Step 3: Fetch UTXOs for the sender's address
-      const utxos = await this.fetchUTXOs(fromAddress);
-      if (utxos.length === 0) {
-        throw new BadRequestException('No UTXOs available for the address.');
-      }
+
+      // Step 2: Determine if we should use legacy or SegWit format
+      const { address: fromAddress, addressType, utxos } = await this.getAddressAndUTXOs(keyPair);
+
       // Step 4: Create a new Psbt (Partially Signed Bitcoin Transaction)
       const psbt = new Psbt({ network: this.bitcoinNetwork });
       let inputSum = new Decimal(0);
 
       // Step 5: Add inputs (UTXOs) to the Psbt
       for (const utxo of utxos) {
-        const txHex = await this.fetchTransactionHex(utxo.txid);
-        psbt.addInput({
-          hash: utxo.txid,
-          index: utxo.vout,
-          nonWitnessUtxo: Buffer.from(txHex, 'hex'),
-        });
-        inputSum = DecimalsHelper.sum(
-          inputSum,
-          utxo.value,
-        );
+        await this.processInput(psbt, utxo, addressType, keyPair);
+        inputSum = DecimalsHelper.sum(inputSum, utxo.value);
       }
+
       // Step 6: Estimate the transaction fee
       const feeRate: number = await this.getFeeRate(); // Satoshis per byte (adjust as needed)
       const inputCount = utxos.length;
       let outputCount = 2; // Assuming a change output
-      let estimatedTxSize = inputCount * 148 + outputCount * 34 + 10;
+
+      // Different size calculation based on address type
+      let estimatedTxSize = this.getEstimatedTxSize(inputCount, outputCount, addressType);
       let fee = DecimalsHelper.multiply(feeRate, estimatedTxSize);
 
       // Step 7: Calculate the change amount
@@ -131,7 +194,9 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
         fee = DecimalsHelper.sum(fee, change)
         change = new Decimal(0)
         outputCount = 1; // Only the recipient output
-        estimatedTxSize = inputCount * 148 + outputCount * 34 + 10;
+
+        // Recalculate transaction size for single output
+        estimatedTxSize = this.getEstimatedTxSize(inputCount, outputCount, addressType);
         fee = DecimalsHelper.multiply(feeRate, estimatedTxSize);
 
         if (DecimalsHelper.isFirstLessThanSecond(
@@ -219,7 +284,7 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
   // Helper method to fetch UTXOs
   private async fetchUTXOs(address: string): Promise<UTXO[]> {
     try {
-      const response = await this.api.get(`address/${address}/utxo`);
+      const response = await this.apiOfMempoolSpace.get(`address/${address}/utxo`);
       return response.data.map((utxo: any) => ({
         txid: utxo.txid,
         vout: utxo.vout,
@@ -235,7 +300,7 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
   // Helper method to fetch raw transaction hex
   private async fetchTransactionHex(txid: string): Promise<string> {
     try {
-      const response = await this.api.get(`tx/${txid}/hex`);
+      const response = await this.apiOfMempoolSpace.get(`tx/${txid}/hex`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching transaction hex for txid ${txid}:`, error);
@@ -243,7 +308,7 @@ export class BitcoinStrategyService implements IBlockChainPrivateServer {
     }
   }
 
-  async getSignedSwapTransaction(dto: any, privateKey: string): Promise<any> {
+  async getSignedSwapTransaction(dto: any): Promise<any> {
     throw new Error('Method not implemented.');
   }
 }

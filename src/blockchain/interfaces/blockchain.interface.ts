@@ -1,6 +1,6 @@
 import { CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
 import { CustodySignedTransaction } from "../../../rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type";
-import { SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
+import { PrivateKeyFilledSignSwapTransactionDto, PrivateKeyFilledSignTransactionDto, SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
 
 export interface IWalletKeys {
   privateKey: string;
@@ -17,12 +17,9 @@ export interface IBlockChainPrivateServer {
   init(initData: InitBlockChainPrivateServerStrategies): Promise<void>;
   createWallet(): Promise<IWalletKeys>;
   getSignedTransaction(
-    dto: SignTransactionDto,
-    privateKey: string,
-    secondPrivateKey?: string
+    dto: PrivateKeyFilledSignTransactionDto,
   ): Promise<CustodySignedTransaction>;
   getSignedSwapTransaction(
-    dto: SignTransactionDto,
-    privateKey: string,
+    dto: PrivateKeyFilledSignSwapTransactionDto,
   ): Promise<CustodySignedTransaction>;
 }
