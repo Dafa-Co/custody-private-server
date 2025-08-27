@@ -52,7 +52,7 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
 
             const senderPrivateKey = sender.privateKey;
 
-            const payer = getSignerFromSigners(signers, SignerTypeEnum.PAYER, true);
+            const payer = getSignerFromSigners(signers, SignerTypeEnum.PAYER, false);
             const payerPrivateKey = payer ? payer.privateKey : undefined;
 
             const signedTransaction: StellarSdk.FeeBumpTransaction | StellarSdk.Transaction =
@@ -160,7 +160,7 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
         transaction.sign(senderKey);
 
         // If payerPrivateKey is provided, create a fee-bump transaction
-        if (payerPrivateKey) {
+        if (payerPrivateKey && payerPrivateKey !== senderPrivateKey) {
             const gasStationKey = StellarSdk.Keypair.fromSecret(payerPrivateKey);
 
             // Create fee-bump transaction
