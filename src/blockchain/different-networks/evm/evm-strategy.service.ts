@@ -9,7 +9,8 @@ import { PrivateKeyFilledSignSwapTransactionDto, PrivateKeyFilledSignTransaction
 import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { EvmProtocols, WalletProtocols } from 'rox-custody_common-modules/libs/enums/wallets-protocols.enum';
-import { AccountAbstractionStrategyService } from '../account-abstraction-strategy.service';
+import { AccountAbstractionStrategyService } from './account-abstraction/account-abstraction-strategy.service';
+import { EoaStrategyService } from './eoa/eoa-strategy.service';
 
 @Injectable()
 export class EVMStrategyService implements IBlockChainPrivateServer {
@@ -23,6 +24,11 @@ export class EVMStrategyService implements IBlockChainPrivateServer {
         switch (this.protocol) {
             case EvmProtocols.ERC_4337:
                 this.strategy = new AccountAbstractionStrategyService(this.nonceManager, this.logger);
+                break;
+            case EvmProtocols.EOA:
+                console.log('Using EOA strategy');
+                this.strategy = new EoaStrategyService();
+                break;
             default:
                 throw new Error('This protocol is not supported yet');
         }

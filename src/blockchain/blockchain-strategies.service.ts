@@ -1,7 +1,6 @@
 import { IBlockChainPrivateServer } from 'src/blockchain/interfaces/blockchain.interface';
 import { CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
 import { BitcoinStrategyService } from './different-networks/bitcoin-strategy.service';
-import { AccountAbstractionStrategyService } from './different-networks/account-abstraction-strategy.service';
 import {
   getChainFromNetwork,
 } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
@@ -14,6 +13,7 @@ import { XrpStrategyService } from './different-networks/xrp-strategy.service';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { StellarStrategyService } from './different-networks/stellar-strategy.service';
 import { WalletProtocols } from 'rox-custody_common-modules/libs/enums/wallets-protocols.enum';
+import { EVMStrategyService } from './different-networks/evm/evm-strategy.service';
 
 @Injectable()
 export class BlockchainFactoriesService {
@@ -36,7 +36,7 @@ export class BlockchainFactoriesService {
 
     switch (category) {
       case NetworkCategory.EVM:
-        strategy = new AccountAbstractionStrategyService(this.nonceManager, this.logger);
+        strategy = new EVMStrategyService(this.nonceManager, this.logger, protocol);
         break;
 
       case NetworkCategory.BitCoin:

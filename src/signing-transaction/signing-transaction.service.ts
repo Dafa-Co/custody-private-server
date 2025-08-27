@@ -41,12 +41,12 @@ export class SigningTransactionService {
   async signTransaction(
     dto: PrivateServerSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { asset, corporateId } = dto;
+    const { asset, corporateId, protocol } = dto;
 
     const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
 
     const blockchainFactory =
-      await this.blockchainFactoriesService.getStrategy(asset, 0);
+      await this.blockchainFactoriesService.getStrategy(asset, protocol);
 
     return await blockchainFactory.getSignedTransaction({
       ...dto,
@@ -75,12 +75,12 @@ export class SigningTransactionService {
   async signSwapTransaction(
     dto: PrivateServerSignSwapTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { asset, corporateId } = dto;
+    const { asset, corporateId, protocol } = dto;
 
     const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
 
     const blockchainFactory =
-      await this.blockchainFactoriesService.getStrategy(asset, 0);
+      await this.blockchainFactoriesService.getStrategy(asset, protocol);
 
     return await blockchainFactory.getSignedSwapTransaction({
       ...dto,
