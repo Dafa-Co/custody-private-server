@@ -1,7 +1,6 @@
 import { IBlockChainPrivateServer } from 'src/blockchain/interfaces/blockchain.interface';
 import { CommonAsset } from 'rox-custody_common-modules/libs/entities/asset.entity';
 import { BitcoinStrategyService } from './different-networks/bitcoin-strategy.service';
-import { AccountAbstractionStrategyService } from './different-networks/account-abstraction-strategy.service';
 import {
   getChainFromNetwork,
 } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
@@ -12,6 +11,10 @@ import { Injectable } from '@nestjs/common';
 import { SolanaStrategyService } from './different-networks/solana-strategy.service';
 import { XrpStrategyService } from './different-networks/xrp-strategy.service';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
+import { AccountAbstractionStrategyService } from './different-networks/account-abstraction/account-abstraction-strategy.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { PrivateKeyVersion } from 'src/keys-manager/entities/private-key-version.entity';
+import { Repository } from 'typeorm';
 import { PolkadotStrategyService } from './different-networks/polkadot-strategy.service';
 import { StellarStrategyService } from './different-networks/stellar-strategy.service';
 
@@ -21,7 +24,9 @@ export class BlockchainFactoriesService {
 
   constructor(
     private readonly nonceManager: NonceManagerService,
-    private readonly logger: CustodyLogger
+    private readonly logger: CustodyLogger,
+    @InjectRepository(PrivateKeyVersion)
+    private readonly privateKeyVersionRepository: Repository<PrivateKeyVersion>,
   ) { }
 
   async getStrategy(asset: CommonAsset): Promise<IBlockChainPrivateServer> {
@@ -36,7 +41,7 @@ export class BlockchainFactoriesService {
 
     switch (category) {
       case NetworkCategory.EVM:
-        strategy = new AccountAbstractionStrategyService(this.nonceManager, this.logger);
+        strategy = new AccountAbstractionStrategyService(this.nonceManager, this.logger, this.privateKeyVersionRepository);
         break;
 
       case NetworkCategory.BitCoin:
