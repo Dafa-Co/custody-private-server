@@ -1,7 +1,11 @@
 {
     "cSpell.words": [
         "Biconomy",
-        "Solana"
+        "Devnet",
+        "Polkadot",
+        "Solana",
+        "viem",
+        "Westend"
     ],
-    "CodeGPT.apiKey": "CodeGPT Plus"
+    "CodeGPT.apiKey": "Anthropic"
 }
