@@ -33,6 +33,8 @@ import {
 import { secretsTypes, throwOrReturn } from 'account-abstraction.secret';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import {
+  PrivateKeyFilledSignSwapTransactionDto,
+  PrivateKeyFilledSignTransactionDto,
   PrivateServerSignSwapTransactionDto,
   PrivateServerSignTransactionDto,
 } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
@@ -40,7 +42,6 @@ import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/globa
 import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 const abi = require('erc-20-abi');
 import { Web3 } from 'web3';
-import { EvmHelper } from 'src/utils/helpers/evm-helper';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { HexString } from 'rox-custody_common-modules/libs/types/hex-string.type';
 import { BiconomyAccountTypeEnum } from 'src/utils/enums/biconomy-account-type.enum';
@@ -54,7 +55,6 @@ import {
   NEXUS_BOOTSTRAP_ADDRESS,
   NEXUS_IMPLEMENTATION_ADDRESS,
   NEXUS_SUPPORTED_NETWORK_IDS,
-  V2_FACTORY_ADDRESS,
 } from './constants/nexus.constants';
 import { isDefined } from 'class-validator';
 import { CustomUserOperation } from 'rox-custody_common-modules/libs/interfaces/custom-user-operation.interface';
@@ -62,6 +62,9 @@ import { convertBigIntsToStrings } from 'src/utils/helpers/convert-big-ints-to-s
 import { Repository } from 'typeorm';
 import { PrivateKeyVersion } from 'src/keys-manager/entities/private-key-version.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { EvmHelper } from 'src/utils/helpers/evm.helper';
+import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
+import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 
 @Injectable()
 export class AccountAbstractionStrategyService
@@ -239,8 +242,7 @@ export class AccountAbstractionStrategyService
   }
 
   private async getSmartAccount(privateKey: string) {
-    // TODO: remove unused vars
-    const { account, type, shouldMigrate } =
+    const { account, type } =
       await this.convertPrivateKeyToSmartAccount(privateKey);
 
     return {
@@ -417,10 +419,14 @@ export class AccountAbstractionStrategyService
   }
 
   async getSignedTransaction(
-    dto: PrivateServerSignTransactionDto,
-    privateKey: string,
+    dto: PrivateKeyFilledSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { amount, asset, keyId, to, transactionId } = dto;
+    const { amount, asset, to, transactionId, signers } = dto;
+
+    const sender = getSignerFromSigners(signers, SignerTypeEnum.SENDER, true);
+    
+    const keyId = sender.keyId;
+    const privateKey = sender.privateKey;
 
     const [nonce] = await Promise.all([
       this.nonceManager.getNonce(keyId, asset.networkId),
@@ -483,12 +489,17 @@ export class AccountAbstractionStrategyService
   }
 
   async getSignedSwapTransaction(
-    dto: PrivateServerSignSwapTransactionDto,
-    privateKey: string,
+    dto: PrivateKeyFilledSignSwapTransactionDto,
   ): Promise<CustodySignedTransaction> {
     try {
-      const { keyId, transactionId, swapTransaction } = dto;
+      const { transactionId, swapTransaction, signers } = dto;
       const { permit2 } = swapTransaction;
+
+      const sender = getSignerFromSigners(signers, SignerTypeEnum.SENDER, true);
+      
+      const keyId = sender.keyId;
+      const privateKey = sender.privateKey;
+
       // Extract transaction parameters
       const txParams = this.extractTransactionParams(swapTransaction);
 

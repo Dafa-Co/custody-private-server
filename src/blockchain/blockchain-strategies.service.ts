@@ -11,15 +11,12 @@ import { Injectable } from '@nestjs/common';
 import { SolanaStrategyService } from './different-networks/solana-strategy.service';
 import { XrpStrategyService } from './different-networks/xrp-strategy.service';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
-<<<<<<< HEAD
 import { AccountAbstractionStrategyService } from './different-networks/account-abstraction/account-abstraction-strategy.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PrivateKeyVersion } from 'src/keys-manager/entities/private-key-version.entity';
 import { Repository } from 'typeorm';
-=======
 import { PolkadotStrategyService } from './different-networks/polkadot-strategy.service';
 import { StellarStrategyService } from './different-networks/stellar-strategy.service';
->>>>>>> 7940657a529ea1219037fd258afb04bdd5a124b8
 
 @Injectable()
 export class BlockchainFactoriesService {
