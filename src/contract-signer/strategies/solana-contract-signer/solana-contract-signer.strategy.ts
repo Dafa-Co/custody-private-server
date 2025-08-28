@@ -120,7 +120,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
   private async concatenateTransactionInstructions(dto: IPrivateKeyFilledSignSolanaContractTransaction, payerKeyPair: Keypair, mintKeypair: Keypair, ownerKeyPair: Keypair, requiredLamportsForMint: number) {
     const recipientAddress = new PublicKey(dto.recipientAddress);
     
-    let instructions: TransactionInstruction[] = [];
+    const instructions: TransactionInstruction[] = [];
     
     // create mint account (token account), with required balance (in lamports) for a token account
     instructions.push(SystemProgram.createAccount({
