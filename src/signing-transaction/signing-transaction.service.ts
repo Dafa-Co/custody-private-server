@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { IPrivateKeyFilledTransactionSigner, IPrivateServerTransactionSigner, PrivateKeyFilledSignTransactionDto, PrivateServerSignSwapTransactionDto, PrivateServerSignTransactionDto } from '../../rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import {
+  IPrivateKeyFilledTransactionSigner,
+  IPrivateServerTransactionSigner,
+  PrivateServerSignSwapTransactionDto,
+  PrivateServerSignTransactionDto,
+} from '../../rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import {
   CustodySignedTransaction,
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
@@ -7,8 +12,7 @@ import { BlockchainFactoriesService } from 'src/blockchain/blockchain-strategies
 import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { ContractSignerStrategiesService } from 'src/contract-signer/contract-signer-strategies.service';
 import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
-import { isDefined } from 'class-validator';
-import { IPrivateServerSignContractTransaction, ISignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
+import { IPrivateServerSignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 
 @Injectable()
 export class SigningTransactionService {
