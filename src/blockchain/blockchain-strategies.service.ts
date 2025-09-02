@@ -12,6 +12,7 @@ import { Injectable } from '@nestjs/common';
 import { SolanaStrategyService } from './different-networks/solana-strategy.service';
 import { XrpStrategyService } from './different-networks/xrp-strategy.service';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
+import { PolkadotStrategyService } from './different-networks/polkadot-strategy.service';
 import { StellarStrategyService } from './different-networks/stellar-strategy.service';
 import { SuiStrategyService } from './different-networks/sui-strategy.service';
 
@@ -56,6 +57,10 @@ export class BlockchainFactoriesService {
         strategy = new XrpStrategyService();
         break;
 
+      case NetworkCategory.Polkadot:
+        strategy = new PolkadotStrategyService();
+        break;
+        
       case NetworkCategory.Stellar:
         strategy = new StellarStrategyService(this.logger);
         break;

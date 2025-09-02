@@ -6,6 +6,10 @@
         "Keypair",
         "keypairs",
         "mysten",
+        "Biconomy",
+        "Polkadot",
+        "viem",
+        "Westend",
         "Solana"
     ],
     "CodeGPT.apiKey": "CodeGPT Plus"
