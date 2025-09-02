@@ -12,5 +12,6 @@
         "Westend",
         "Solana"
     ],
-    "CodeGPT.apiKey": "CodeGPT Plus"
+    "CodeGPT.apiKey": "CodeGPT Plus",
+    "editor.fontFamily": "Fira Code"
 }

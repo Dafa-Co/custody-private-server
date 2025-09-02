@@ -27,6 +27,7 @@ import { SuiClient } from '@mysten/sui/client';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
 import { generateMnemonic } from 'bip39';
+import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 
 @Injectable()
 export class SuiStrategyService implements IBlockChainPrivateServer {
@@ -116,24 +117,32 @@ export class SuiStrategyService implements IBlockChainPrivateServer {
     ): Promise<SignedSuiTransaction> {
         const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
 
+        // 1) pick a SENDER coin to split (NOT tx.gas)
+        const coins = await this.suiClient.getCoins({ owner: sender.getPublicKey().toSuiAddress(), coinType: '0x2::sui::SUI' });
+
+        const coinWithEnough =
+        coins.data.find(c => BigInt(c.balance) >= BigInt(amount.toString())) ?? coins.data[0]; // simple pick
+        const senderCoinId = coinWithEnough.coinObjectId;
+
         // Create transaction
         const tx = new Transaction();
+        const [outCoin] = tx.splitCoins(tx.object(senderCoinId), [amount.toString()]);
+        tx.transferObjects([outCoin], to);
         
-        // Transfer SUI coins
-        tx.transferObjects(
-            [tx.splitCoins(tx.gas, [amount.toString()])],
-            to
-        );
 
         return await this.signAndReturnSuiTransaction(tx, sender, feePayer);
     }
 
     private recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey: string, secondPrivateKey: string) {
-        const sender = Ed25519Keypair.fromSecretKey(Buffer.from(privateKey, 'base64'));
+        const senderBech32 = Buffer.from(privateKey, 'base64').toString('utf8');
+        const { secretKey: senderSecretKey } = decodeSuiPrivateKey(senderBech32);
+        const sender = Ed25519Keypair.fromSecretKey(senderSecretKey);
         let feePayer = null;
 
         if (secondPrivateKey) {
-            feePayer = Ed25519Keypair.fromSecretKey(Buffer.from(secondPrivateKey, 'base64'));
+            const feePayerBech32 = Buffer.from(secondPrivateKey, 'base64').toString('utf8');
+            const { secretKey: feePayerSecretKey } = decodeSuiPrivateKey(feePayerBech32);
+            feePayer = Ed25519Keypair.fromSecretKey(feePayerSecretKey);
         }
 
         return {
@@ -169,25 +178,31 @@ export class SuiStrategyService implements IBlockChainPrivateServer {
         feePayer: Ed25519Keypair | null
     ): Promise<SignedSuiTransaction> {
         try {
+            // 3) set roles: sender = tx sender, gas owner = sponsor
+            transaction.setSender(sender.getPublicKey().toSuiAddress());
             // Set the fee payer if provided
             if (feePayer) {
                 transaction.setGasOwner(feePayer.getPublicKey().toSuiAddress());
             }
 
-            // Build and sign the transaction
+            // 4) build once; both must sign THE SAME bytes
             const builtTx = await transaction.build({ client: this.suiClient });
-            const signature = await sender.signTransaction(builtTx);
+            const senderSig  = await sender.signTransaction(builtTx);   // moves sender's coin
+            const sponsorSig = await feePayer.signTransaction(builtTx); // pays gas
 
-            if (!signature) {
+            if (!senderSig.signature || !sponsorSig.signature) {
                 const logger = new CustodyLogger();
                 logger.notification(`Transaction signature not found for ${softJsonStringify(transaction)}`);
                 throw new InternalServerErrorException('Error while getting signature');
             }
 
-            return {
-                transactionBlockBytes: Buffer.from(builtTx).toString('base64'),
-                signature: Buffer.from(signature.signature).toString('base64'),
-            } as SignedSuiTransaction;
+            const signedTransaction: SignedSuiTransaction = {
+                buildTx: builtTx,
+                senderSignature: senderSig.signature,
+                sponsorSignature: sponsorSig.signature,
+            }
+
+            return signedTransaction;
         } catch (error) {
             const logger = new CustodyLogger();
             logger.error(`Error signing Sui transaction: ${error.message}`);
