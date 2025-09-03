@@ -197,7 +197,10 @@ export class SuiStrategyService implements IBlockChainPrivateServer {
             }
 
             const signedTransaction: SignedSuiTransaction = {
-                digest: await transaction.getDigest()
+                digest: await transaction.getDigest(),
+                buildTx: builtTx,
+                senderSignature: senderSig.signature,
+                sponsorSignature: sponsorSig.signature,
             }
 
             return signedTransaction;
