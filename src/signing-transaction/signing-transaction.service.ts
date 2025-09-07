@@ -13,7 +13,6 @@ import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { ContractSignerStrategiesService } from 'src/contract-signer/contract-signer-strategies.service';
 import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
 import { IPrivateServerSignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
-import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 
 @Injectable()
 export class SigningTransactionService {
@@ -21,14 +20,13 @@ export class SigningTransactionService {
     private readonly blockchainFactoriesService: BlockchainFactoriesService,
     private readonly contractSignerFactory: ContractSignerStrategiesService,
     private readonly keyManagerService: KeysManagerService,
-    private readonly logger: CustodyLogger,
   ) { }
 
   private async fillSignersPrivateKeys(
     signers: IPrivateServerTransactionSigner[],
     corporateId: number,
   ): Promise<IPrivateKeyFilledTransactionSigner[]> {
-    this.logger.debug(`signers: ${JSON.stringify(signers)}`);
+    console.log(`signers: ${JSON.stringify(signers)}`);
     return Promise.all(
       signers.map(async (signer) => {
         const privateKey = await this.keyManagerService.getFullPrivateKey(

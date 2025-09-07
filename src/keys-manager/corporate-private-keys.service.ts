@@ -94,7 +94,7 @@ export class CorporatePrivateKeysService {
 
       return decryptedData.toString('utf8');
     } catch (error) {
-      this.logger.error(`Error decrypting data: ${error.stack ?? error.message}`);
+      console.log(`Error decrypting data: ${error.stack ?? error.message}`);
       throw new InvalidPartOfPrivateKey();
     }
   }
