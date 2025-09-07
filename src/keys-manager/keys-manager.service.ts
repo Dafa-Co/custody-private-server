@@ -123,6 +123,8 @@ export class KeysManagerService {
       },
     });
 
+    this.logger.debug(`private key id: ${keyId}`);
+
     if (!privateKey) {
       throw new BadRequestException('Private key not found');
     }
