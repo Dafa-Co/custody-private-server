@@ -121,8 +121,6 @@ export class KeysManagerService {
       },
     });
 
-    console.log(`private key id: ${keyId}`);
-
     if (!privateKey) {
       throw new BadRequestException('Private key not found');
     }

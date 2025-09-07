@@ -26,7 +26,6 @@ export class SigningTransactionService {
     signers: IPrivateServerTransactionSigner[],
     corporateId: number,
   ): Promise<IPrivateKeyFilledTransactionSigner[]> {
-    console.log(`signers: ${JSON.stringify(signers)}`);
     return Promise.all(
       signers.map(async (signer) => {
         const privateKey = await this.keyManagerService.getFullPrivateKey(
