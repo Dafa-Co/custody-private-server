@@ -4,14 +4,12 @@ import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { CorporateKeyEntity } from './entities/corporate-key.entity';
 import { InvalidPartOfPrivateKey } from 'rox-custody_common-modules/libs/custom-errors/invalid-part-of-private-key.exception';
-import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 
 @Injectable()
 export class CorporatePrivateKeysService {
   constructor(
     @InjectRepository(CorporateKeyEntity)
     private readonly corporateRepository: Repository<CorporateKeyEntity>,
-    private readonly logger: CustodyLogger,
   ) {}
 
   // Function to generate key pair
@@ -94,7 +92,7 @@ export class CorporatePrivateKeysService {
 
       return decryptedData.toString('utf8');
     } catch (error) {
-      console.log(`Error decrypting data: ${error.stack ?? error.message}`);
+      console.log("error", error);
       throw new InvalidPartOfPrivateKey();
     }
   }
