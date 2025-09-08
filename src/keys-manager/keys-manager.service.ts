@@ -9,6 +9,7 @@ import { IGenerateKeyPairResponse } from 'rox-custody_common-modules/libs/interf
 import { IdempotentKeyEntity } from './entities/idempotent-key.entity';
 import { isDefined } from 'class-validator';
 import { v4 as uuidv4 } from 'uuid';
+import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 
 @Injectable()
 export class KeysManagerService {
@@ -20,6 +21,7 @@ export class KeysManagerService {
     private readonly blockchainFactoriesService: BlockchainFactoriesService,
     private corporateKey: CorporatePrivateKeysService,
     @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly logger: CustodyLogger,
   ) { }
 
   private getKeysParts(
