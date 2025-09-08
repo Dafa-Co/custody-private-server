@@ -60,6 +60,7 @@
     "bitcore-lib": "^10.0.28",
     "bitcore-mnemonic": "^10.0.28",
     "bn.js": "^5.2.1",
+    "bs58": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "date-fns": "^4.1.0",
