@@ -3,7 +3,7 @@ import { IBlockChainPrivateServer, InitBlockChainPrivateServerStrategies, IWalle
 import { AssetType, CommonAsset } from "rox-custody_common-modules/libs/entities/asset.entity";
 import { Chain } from "viem";
 import { CustodySignedTransaction } from "rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type";
-import { PrivateKeyFilledSignSwapTransactionDto, PrivateKeyFilledSignTransactionDto, SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
+import { IPrivateKeyFilledTransactionSigner, PrivateKeyFilledSignSwapTransactionDto, PrivateKeyFilledSignTransactionDto, SignTransactionDto } from "rox-custody_common-modules/libs/interfaces/sign-transaction.interface";
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { HorizonServer } from "@stellar/stellar-sdk/lib/horizon/server";
 import { getChainFromNetwork, networkData } from "rox-custody_common-modules/blockchain/global-commons/get-network-chain";
@@ -42,18 +42,30 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
         };
     }
 
+    private getPayerPrivateKey(signers: IPrivateKeyFilledTransactionSigner[], isGasless: boolean): string | undefined {
+        if (!isGasless) {
+            return undefined;
+        }
+
+        const payer = getSignerFromSigners(signers, SignerTypeEnum.PAYER, true);
+
+        if (!payer) {
+            throw new BadRequestException('Payer signer is required for gasless transaction');
+        }
+
+        return payer.privateKey;
+    }
+
     async getSignedTransaction(
         dto: PrivateKeyFilledSignTransactionDto,
     ): Promise<CustodySignedTransaction> {
-        const { transactionId, signers } = dto;
+        const { transactionId, signers, isGasless } = dto;
 
         try {
             const sender = getSignerFromSigners(signers, SignerTypeEnum.SENDER, true);
 
             const senderPrivateKey = sender.privateKey;
-
-            const payer = getSignerFromSigners(signers, SignerTypeEnum.PAYER, false);
-            const payerPrivateKey = payer ? payer.privateKey : undefined;
+            const payerPrivateKey = this.getPayerPrivateKey(signers, isGasless);
 
             const signedTransaction: StellarSdk.FeeBumpTransaction | StellarSdk.Transaction =
                 this.asset.type === AssetType.COIN
