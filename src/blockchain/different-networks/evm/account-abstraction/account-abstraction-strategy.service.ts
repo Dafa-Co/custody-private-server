@@ -133,6 +133,7 @@ export class AccountAbstractionStrategyService
     valueSmallUnit: bigint,
     data: string | null,
     nonce: number,
+    isGasless: boolean,
   ): Promise<SignedTransaction | null> {
     try {
       const tokenTransaction: Transaction = {
@@ -147,10 +148,18 @@ export class AccountAbstractionStrategyService
       const transactionBody = data ? tokenTransaction : CoinTransaction;
 
       // Directly build the user operation without retrying here
-      const transaction = await this.retryBuildUserOp(
-        smartAccount,
-        [transactionBody],
-        nonce,
+      const transaction = await (
+        isGasless ?
+          this.retryBuildUserOp(
+            smartAccount,
+            [transactionBody],
+            nonce,
+          ) :
+          this.retryBuildUserOpWithoutPaymaster(
+            smartAccount,
+            [transactionBody],
+            nonce,
+          )
       );
 
       if (!transaction) {
@@ -199,7 +208,7 @@ export class AccountAbstractionStrategyService
   async getSignedTransaction(
     dto: PrivateKeyFilledSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { amount, asset, to, transactionId, signers } =
+    const { amount, asset, to, transactionId, signers, isGasless } =
       dto;
 
     const sender = getSignerFromSigners(signers, SignerTypeEnum.SENDER, true);
@@ -232,6 +241,7 @@ export class AccountAbstractionStrategyService
       valueSmallUnit,
       data,
       nonce,
+      isGasless,
     );
 
     return {
