@@ -49,10 +49,6 @@ export class StellarStrategyService implements IBlockChainPrivateServer {
 
         const payer = getSignerFromSigners(signers, SignerTypeEnum.PAYER, true);
 
-        if (!payer) {
-            throw new BadRequestException('Payer signer is required for gasless transaction');
-        }
-
         return payer.privateKey;
     }
 

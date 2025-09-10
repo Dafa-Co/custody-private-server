@@ -71,10 +71,6 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
 
         const payer = getSignerFromSigners(signers, SignerTypeEnum.PAYER, true);
 
-        if (!payer) {
-            throw new BadRequestException('Payer is required for gasless transactions');
-        }
-
         return payer.privateKey;
     }
 

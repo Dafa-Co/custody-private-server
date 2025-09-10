@@ -8,13 +8,9 @@ import { NonceManagerModule } from 'src/nonce-manager/nonce-manager.module';
   imports: [NonceManagerModule],
   providers: [
     BlockchainFactoriesService,
-    BitcoinStrategyService,
-    TronStrategyService,
   ],
   exports: [
     BlockchainFactoriesService,
-    BitcoinStrategyService,
-    TronStrategyService,
   ],
 })
 export class BlockchainModule {}
