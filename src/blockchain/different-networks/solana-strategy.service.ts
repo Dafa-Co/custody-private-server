@@ -9,6 +9,7 @@ import {
     SignedSolanaTransaction,
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import {
+    IPrivateKeyFilledTransactionSigner,
     PrivateKeyFilledSignTransactionDto,
     PrivateServerSignTransactionDto,
 } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
@@ -63,6 +64,16 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
         return { privateKey, address };
     }
 
+    private getPayerPrivateKey(signers: IPrivateKeyFilledTransactionSigner[], isGasless: boolean): string {
+        if (!isGasless) {
+            return null;
+        }
+
+        const payer = getSignerFromSigners(signers, SignerTypeEnum.PAYER, true);
+
+        return payer.privateKey;
+    }
+
     async getSignedTransaction(
         dto: PrivateKeyFilledSignTransactionDto,
     ): Promise<CustodySignedTransaction> {
@@ -73,8 +84,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
 
             const senderPrivateKey = sender.privateKey;
 
-            const payer = getSignerFromSigners(signers, SignerTypeEnum.PAYER);
-            const payerPrivateKey = payer ? payer.privateKey : undefined;
+            const payerPrivateKey = this.getPayerPrivateKey(signers, dto.isGasless);
 
             let signedTransaction: SignedSolanaTransaction;
 
