@@ -15,6 +15,7 @@ import { createAssociatedTokenAccountInstruction, createInitializeMintInstructio
 import { IPrivateKeyFilledTransactionSigner } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import bs58 from 'bs58';
 import Decimal from 'decimal.js';
+import { IPrivateKeyFilledMintSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
 
 @Injectable()
 export class SolanaContractSignerStrategy implements IContractSignerStrategy {
@@ -218,6 +219,52 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     return transaction;
   }
 
+  private async buildMintToExistingTransaction(
+    mintAddress: PublicKey,
+    recipientAddress: string,
+    amount: Decimal,
+    payerKeyPair: Keypair,
+    ownerKeyPair: Keypair,
+  ) {
+    const recipientPubkey = new PublicKey(recipientAddress);
+
+    const transaction = new Transaction();
+
+    const recipientATAPublicKey = await getAssociatedTokenAddress(
+      mintAddress,
+      recipientPubkey,
+      false
+    );
+
+    const ataInfo = await this.connection.getAccountInfo(recipientATAPublicKey);
+    if (!ataInfo) {
+      transaction.add(
+        createAssociatedTokenAccountInstruction(
+          payerKeyPair.publicKey,
+          recipientATAPublicKey,
+          recipientPubkey,
+          mintAddress
+        )
+      );
+    }
+
+    transaction.add(
+      createMintToInstruction(
+        mintAddress,
+        recipientATAPublicKey,
+        ownerKeyPair.publicKey,
+        BigInt(amount.toString()),
+      )
+    );
+
+    const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.lastValidBlockHeight = lastValidBlockHeight;
+    transaction.feePayer = payerKeyPair.publicKey;
+
+    return transaction;
+  }
+
   async signContractTransaction(
     dto: IPrivateKeyFilledSignSolanaContractTransaction,
   ): Promise<ICustodySignedSolanaContractTransaction> {
@@ -238,6 +285,38 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     return {
       transactionHash: sigBase58,
       contractAddress: mintKeyPair.publicKey.toBase58(),
+      signedTransaction: rawTx,
+      estimatedFee: new Decimal(estimatedFee),
+      error: null,
+    };
+  }
+
+  async signMintTokenTransaction(
+    dto: IPrivateKeyFilledMintSolanaTokenTransaction,
+  ): Promise<ICustodySignedSolanaContractTransaction> {
+    const { payerKeyPair, ownerKeyPair } = this.prepareSigners(dto.signers);
+
+    const transaction = await this.buildMintToExistingTransaction(
+      new PublicKey(dto.contractAddress),
+      dto.recipientAddress,
+      dto.amount,
+      payerKeyPair,
+      ownerKeyPair,
+    );
+
+    transaction.sign(payerKeyPair, ownerKeyPair);
+
+    const rawTx = transaction.serialize();
+
+    const sigBase64 = transaction.signature.toString("base64");
+    const sigBytes = Buffer.from(sigBase64, "base64");
+    const sigBase58 = bs58.encode(new Uint8Array(sigBytes));
+
+    const estimatedFee = await transaction.getEstimatedFee(this.connection);
+
+    return {
+      transactionHash: sigBase58,
+      contractAddress: dto.contractAddress,
       signedTransaction: rawTx,
       estimatedFee: new Decimal(estimatedFee),
       error: null,

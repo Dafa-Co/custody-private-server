@@ -1,17 +1,23 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Injectable, InternalServerErrorException, NotImplementedException } from '@nestjs/common';
 import Web3 from 'web3';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import { ICustodySignedContractTransaction, ICustodySignedEVMContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
 import { IContractSignerStrategy } from '../contract-signer-strategy.interface';
-import { IPrivateKeyFilledSignEVMContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
+import { IPrivateKeyFilledSignContractTransaction, IPrivateKeyFilledSignEVMContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
+import { IPrivateKeyFilledMintTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
+import { ICustodyMintTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
 
 @Injectable()
 export class EVMContractSignerStrategy implements IContractSignerStrategy {
   private web3: Web3;
 
   constructor() {}
+  signMintTokenTransaction(dto: IPrivateKeyFilledMintTokenTransaction): Promise<ICustodyMintTokenTransaction> {
+    throw new NotImplementedException('Method not implemented');
+  }
 
   async init(networkId: number): Promise<void> {
     const network = getChainFromNetwork(networkId);

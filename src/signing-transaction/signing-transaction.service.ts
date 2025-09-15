@@ -13,6 +13,8 @@ import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { ContractSignerStrategiesService } from 'src/contract-signer/contract-signer-strategies.service';
 import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
 import { IPrivateServerSignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
+import { ICustodyMintTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
+import { IPrivateServerMintTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
 
 @Injectable()
 export class SigningTransactionService {
@@ -69,6 +71,24 @@ export class SigningTransactionService {
       await this.contractSignerFactory.getContractSignerStrategy(networkId);
 
     return await contractSignerStrategy.signContractTransaction(
+      {
+        ...dto,
+        signers,
+      }
+    );
+  }
+
+  async signMintTokenTransaction(
+    dto: IPrivateServerMintTokenTransaction,
+  ): Promise<ICustodyMintTokenTransaction> {
+    const { corporateId, networkId } = dto;
+
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
+
+    const contractSignerStrategy =
+      await this.contractSignerFactory.getContractSignerStrategy(networkId);
+
+    return await contractSignerStrategy.signMintTokenTransaction(
       {
         ...dto,
         signers,
