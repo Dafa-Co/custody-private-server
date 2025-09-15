@@ -37,6 +37,7 @@ export class SuiStrategyService implements IBlockChainPrivateServer {
     private host: string;
     private suiClient: SuiClient;
 
+
     async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
         const { asset } = initData;
         const networkObject = getChainFromNetwork(asset.networkId); 
