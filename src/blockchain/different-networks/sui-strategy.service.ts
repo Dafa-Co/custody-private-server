@@ -28,6 +28,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
 import { generateMnemonic } from 'bip39';
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
+import { toBase64 } from '@mysten/sui/utils';
 
 @Injectable()
 export class SuiStrategyService implements IBlockChainPrivateServer {
@@ -116,12 +117,13 @@ export class SuiStrategyService implements IBlockChainPrivateServer {
         secondPrivateKey: string,
     ): Promise<SignedSuiTransaction> {
         const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
+        const senderAddr  = sender.getPublicKey().toSuiAddress();
 
         // 1) pick a SENDER coin to split (NOT tx.gas)
-        const coins = await this.suiClient.getCoins({ owner: sender.getPublicKey().toSuiAddress(), coinType: '0x2::sui::SUI' });
+        const coins = await this.suiClient.getCoins({ owner: senderAddr, coinType: '0x2::sui::SUI' });
+        const convertedAmount = BigInt(amount.toString());
 
-        const coinWithEnough =
-        coins.data.find(c => BigInt(c.balance) >= BigInt(amount.toString())) ?? coins.data[0]; // simple pick
+        const coinWithEnough = coins.data.find(c => BigInt(c.balance) >= convertedAmount) ?? coins.data[0]; // simple pick
         const senderCoinId = coinWithEnough.coinObjectId;
 
         // Create transaction
@@ -198,10 +200,22 @@ export class SuiStrategyService implements IBlockChainPrivateServer {
 
             const signedTransaction: SignedSuiTransaction = {
                 digest: await transaction.getDigest(),
-                buildTx: builtTx,
+                buildTx: toBase64(builtTx),
                 senderSignature: senderSig.signature,
                 sponsorSignature: sponsorSig.signature,
             }
+
+            // const res = await this.suiClient.executeTransactionBlock({
+            //     transactionBlock: toBase64(builtTx),
+            //     signature: [senderSig.signature, sponsorSig.signature],
+            //     options: { showEffects: true, showEvents: true, showInput: true },
+            // });
+
+            // console.log('digest:', res.digest);
+            // console.dir(res.effects, { depth: null });
+
+            // console.log("signedTransaction => ", signedTransaction);
+            
 
             return signedTransaction;
         } catch (error) {
