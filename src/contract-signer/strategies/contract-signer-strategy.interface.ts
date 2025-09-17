@@ -1,4 +1,5 @@
 import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
+import { ICustodyMintTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
 import { IPrivateKeyFilledSignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { IPrivateKeyFilledMintTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
 
@@ -9,5 +10,5 @@ export interface IContractSignerStrategy {
   ): Promise<ICustodySignedContractTransaction>;
   signMintTokenTransaction(
     dto: IPrivateKeyFilledMintTokenTransaction,
-  ): Promise<ICustodySignedContractTransaction>;
+  ): Promise<ICustodyMintTokenTransaction>;
 }

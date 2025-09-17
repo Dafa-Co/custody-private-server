@@ -16,6 +16,7 @@ import { IPrivateKeyFilledTransactionSigner } from 'rox-custody_common-modules/l
 import bs58 from 'bs58';
 import Decimal from 'decimal.js';
 import { IPrivateKeyFilledMintSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
+import { ICustodyMintSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
 
 @Injectable()
 export class SolanaContractSignerStrategy implements IContractSignerStrategy {
@@ -293,7 +294,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
 
   async signMintTokenTransaction(
     dto: IPrivateKeyFilledMintSolanaTokenTransaction,
-  ): Promise<ICustodySignedSolanaContractTransaction> {
+  ): Promise<ICustodyMintSolanaTokenTransaction> {
     const { payerKeyPair, ownerKeyPair } = this.prepareSigners(dto.signers);
 
     const transaction = await this.buildMintToExistingTransaction(
