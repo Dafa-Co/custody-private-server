@@ -15,6 +15,8 @@ import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/li
 import { IPrivateServerSignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { ICustodyMintTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
 import { IPrivateServerMintTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
+import { IPrivateServerBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-burn-token-transaction.interface';
+import { ICustodyBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/burn-transaction.interface';
 
 @Injectable()
 export class SigningTransactionService {
@@ -89,6 +91,24 @@ export class SigningTransactionService {
       await this.contractSignerFactory.getContractSignerStrategy(networkId);
 
     return await contractSignerStrategy.signMintTokenTransaction(
+      {
+        ...dto,
+        signers,
+      }
+    );
+  }
+
+  async signBurnTokenTransaction(
+    dto: IPrivateServerBurnTokenTransaction,
+  ): Promise<ICustodyBurnTokenTransaction> {
+    const { corporateId, networkId } = dto;
+
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
+
+    const contractSignerStrategy =
+      await this.contractSignerFactory.getContractSignerStrategy(networkId);
+
+    return await contractSignerStrategy.signBurnTokenTransaction(
       {
         ...dto,
         signers,
