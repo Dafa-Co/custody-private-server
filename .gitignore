@@ -10,7 +10,6 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
-package-lock.json
 # OS
 .DS_Store
 
@@ -42,3 +41,5 @@ public/files/*
 package-lock.json
 env-files*
 account-secrets.*
+
+.env.ignore*

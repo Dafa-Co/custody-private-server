@@ -1,17 +1,28 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Injectable, InternalServerErrorException, NotImplementedException } from '@nestjs/common';
 import Web3 from 'web3';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
-import { ICustodySignedContractTransaction, ICustodySignedEVMContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
+import { ICustodySignedEVMContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
 import { IContractSignerStrategy } from '../contract-signer-strategy.interface';
 import { IPrivateKeyFilledSignEVMContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
+import { IPrivateKeyFilledMintTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
+import { ICustodyMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
+import { ICustodyBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/burn-transaction.interface';
+import { IPrivateKeyFilledBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-burn-token-transaction.interface';
 
 @Injectable()
 export class EVMContractSignerStrategy implements IContractSignerStrategy {
   private web3: Web3;
 
   constructor() {}
+  signBurnTokenTransaction(dto: IPrivateKeyFilledBurnTokenTransaction): Promise<ICustodyBurnTokenTransaction> {
+    throw new NotImplementedException('Method not implemented.');
+  }
+  signMintTokenTransaction(dto: IPrivateKeyFilledMintTokenTransaction): Promise<ICustodyMintOrBurnTokenTransaction> {
+    throw new NotImplementedException('Method not implemented');
+  }
 
   async init(networkId: number): Promise<void> {
     const network = getChainFromNetwork(networkId);
