@@ -117,23 +117,17 @@ export class SuiStrategyService implements IBlockChainPrivateServer {
         amount: Decimal,
         secondPrivateKey: string,
     ): Promise<SignedSuiTransaction> {
-        const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
-        const senderAddr  = sender.getPublicKey().toSuiAddress();
+        return await this.buildAndSignTransfer(privateKey, to, amount, secondPrivateKey, '0x2::sui::SUI');
+    }
 
-        // 1) pick a SENDER coin to split (NOT tx.gas)
-        const coins = await this.suiClient.getCoins({ owner: senderAddr, coinType: '0x2::sui::SUI' });
-        const convertedAmount = BigInt(amount.toString());
 
-        const coinWithEnough = coins.data.find(c => BigInt(c.balance) >= convertedAmount) ?? coins.data[0]; // simple pick
-        const senderCoinId = coinWithEnough.coinObjectId;
-
-        // Create transaction
-        const tx = new Transaction();
-        const [outCoin] = tx.splitCoins(tx.object(senderCoinId), [amount.toString()]);
-        tx.transferObjects([outCoin], to);
-        
-
-        return await this.signAndReturnSuiTransaction(tx, sender, feePayer);
+    async getSignedTransactionToken(
+        privateKey: string,
+        to: string,
+        amount: Decimal,
+        secondPrivateKey: string,
+    ): Promise<SignedSuiTransaction> {
+        return await this.buildAndSignTransfer(privateKey, to, amount, secondPrivateKey, this.asset.contract_address);
     }
 
     private recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey: string, secondPrivateKey: string) {
@@ -152,27 +146,6 @@ export class SuiStrategyService implements IBlockChainPrivateServer {
             sender,
             feePayer
         }
-    }
-
-    async getSignedTransactionToken(
-        privateKey: string,
-        to: string,
-        amount: Decimal,
-        secondPrivateKey: string,
-    ): Promise<SignedSuiTransaction> {
-        const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
-
-        // Create transaction
-        const tx = new Transaction();
-        
-        // Transfer tokens (assuming the token contract follows Sui's token standard)
-        // The contract_address should be the token's coin type
-        tx.transferObjects(
-            [tx.splitCoins(this.asset.contract_address, [amount.toString()])],
-            to
-        );
-
-        return await this.signAndReturnSuiTransaction(tx, sender, feePayer);
     }
 
     private async signAndReturnSuiTransaction(
@@ -206,18 +179,6 @@ export class SuiStrategyService implements IBlockChainPrivateServer {
                 sponsorSignature: sponsorSig.signature,
             }
 
-            // const res = await this.suiClient.executeTransactionBlock({
-            //     transactionBlock: toBase64(builtTx),
-            //     signature: [senderSig.signature, sponsorSig.signature],
-            //     options: { showEffects: true, showEvents: true, showInput: true },
-            // });
-
-            // console.log('digest:', res.digest);
-            // console.dir(res.effects, { depth: null });
-
-            // console.log("signedTransaction => ", signedTransaction);
-            
-
             return signedTransaction;
         } catch (error) {
             const logger = new CustodyLogger();
@@ -232,5 +193,31 @@ export class SuiStrategyService implements IBlockChainPrivateServer {
     ): Promise<CustodySignedTransaction> {
         // Sui does not support swap transactions in the same way as other blockchains.
         throw new Error('Sui does not support swap transactions.');
+    }
+
+    private async buildAndSignTransfer(
+        privateKey: string,
+        to: string,
+        amount: Decimal,
+        secondPrivateKey: string,
+        coinType: string
+    ): Promise<SignedSuiTransaction> {
+        const { sender, feePayer } = this.recreateKeypairFromPreviouslyGeneratedSecretKey(privateKey, secondPrivateKey);
+        const senderAddr  = sender.getPublicKey().toSuiAddress();
+
+        // 1) pick a SENDER coin to split (NOT tx.gas)
+        const coins = await this.suiClient.getCoins({ owner: senderAddr, coinType });
+        const convertedAmount = BigInt(amount.toString());
+
+        const coinWithEnough = coins.data.find(c => BigInt(c.balance) >= convertedAmount) ?? coins.data[0]; // simple pick
+        const senderCoinId = coinWithEnough.coinObjectId;
+
+        // Create transaction
+        const tx = new Transaction();
+        const [outCoin] = tx.splitCoins(tx.object(senderCoinId), [amount.toString()]);
+        tx.transferObjects([outCoin], to);
+        
+
+        return await this.signAndReturnSuiTransaction(tx, sender, feePayer);
     }
 }
