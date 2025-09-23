@@ -7,20 +7,18 @@ import { IContractSignerStrategy } from '../contract-signer-strategy.interface';
 import { IPrivateKeyFilledSignEVMContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
-import { IPrivateKeyFilledMintTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
 import { ICustodyMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
-import { ICustodyBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/burn-transaction.interface';
-import { IPrivateKeyFilledBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-burn-token-transaction.interface';
+import { IPrivateKeyFilledMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
 
 @Injectable()
 export class EVMContractSignerStrategy implements IContractSignerStrategy {
   private web3: Web3;
 
   constructor() {}
-  signBurnTokenTransaction(dto: IPrivateKeyFilledBurnTokenTransaction): Promise<ICustodyBurnTokenTransaction> {
+  signBurnTokenTransaction(dto: IPrivateKeyFilledMintOrBurnTokenTransaction): Promise<ICustodyMintOrBurnTokenTransaction> {
     throw new NotImplementedException('Method not implemented.');
   }
-  signMintTokenTransaction(dto: IPrivateKeyFilledMintTokenTransaction): Promise<ICustodyMintOrBurnTokenTransaction> {
+  signMintTokenTransaction(dto: IPrivateKeyFilledMintOrBurnTokenTransaction): Promise<ICustodyMintOrBurnTokenTransaction> {
     throw new NotImplementedException('Method not implemented');
   }
 

@@ -13,10 +13,8 @@ import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { ContractSignerStrategiesService } from 'src/contract-signer/contract-signer-strategies.service';
 import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
 import { IPrivateServerSignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
-import { IPrivateServerMintTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
-import { IPrivateServerBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-burn-token-transaction.interface';
-import { ICustodyBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/burn-transaction.interface';
 import { ICustodyMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
+import { IPrivateServerMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
 
 @Injectable()
 export class SigningTransactionService {
@@ -81,7 +79,7 @@ export class SigningTransactionService {
   }
 
   async signMintTokenTransaction(
-    dto: IPrivateServerMintTokenTransaction,
+    dto: IPrivateServerMintOrBurnTokenTransaction,
   ): Promise<ICustodyMintOrBurnTokenTransaction> {
     const { corporateId, networkId } = dto;
 
@@ -99,8 +97,8 @@ export class SigningTransactionService {
   }
 
   async signBurnTokenTransaction(
-    dto: IPrivateServerBurnTokenTransaction,
-  ): Promise<ICustodyBurnTokenTransaction> {
+    dto: IPrivateServerMintOrBurnTokenTransaction,
+  ): Promise<ICustodyMintOrBurnTokenTransaction> {
     const { corporateId, networkId } = dto;
 
     const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
