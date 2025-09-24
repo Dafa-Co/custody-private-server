@@ -13,6 +13,7 @@ import { XrpStrategyService } from './different-networks/xrp-strategy.service';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { PolkadotStrategyService } from './different-networks/polkadot-strategy.service';
 import { StellarStrategyService } from './different-networks/stellar-strategy.service';
+import { SuiStrategyService } from './different-networks/sui-strategy.service';
 import { WalletProtocols } from 'rox-custody_common-modules/libs/enums/wallets-protocols.enum';
 import { EVMStrategyService } from './different-networks/evm/evm-strategy.service';
 
@@ -63,6 +64,10 @@ export class BlockchainFactoriesService {
         
       case NetworkCategory.Stellar:
         strategy = new StellarStrategyService(this.logger);
+        break;
+
+      case NetworkCategory.Sui:
+        strategy = new SuiStrategyService();
         break;
     }
 

@@ -1,12 +1,17 @@
 {
-        "cSpell.words": [
-                "Biconomy",
-                "Devnet",
-                "Polkadot",
-                "Solana",
-                "viem",
-                "Westend",
-                "Solana"
-        ],
-        "CodeGPT.apiKey": "Anthropic"
+    "cSpell.words": [
+        "Biconomy",
+        "Devnet",
+        "Fullnode",
+        "Keypair",
+        "keypairs",
+        "mysten",
+        "Biconomy",
+        "Polkadot",
+        "viem",
+        "Westend",
+        "Solana"
+    ],
+    "CodeGPT.apiKey": "CodeGPT Plus",
+    "editor.fontFamily": "Fira Code"
 }
