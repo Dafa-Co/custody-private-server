@@ -15,10 +15,8 @@ import { createAssociatedTokenAccountInstruction, createInitializeMintInstructio
 import { IPrivateKeyFilledTransactionSigner } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import bs58 from 'bs58';
 import Decimal from 'decimal.js';
-import { IPrivateKeyFilledMintSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
-import { ICustodyMintSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
-import { IPrivateKeyFilledBurnSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-burn-token-transaction.interface';
-import { ICustodyBurnSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/burn-transaction.interface';
+import { IPrivateKeyFilledMintOrBurnSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
+import { ICustodyMintOrBurnSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
 
 
 enum InstructionType {
@@ -334,16 +332,16 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
   }
 
   async signMintTokenTransaction(
-    dto: IPrivateKeyFilledMintSolanaTokenTransaction,
-  ): Promise<ICustodyMintSolanaTokenTransaction> {
+    dto: IPrivateKeyFilledMintOrBurnSolanaTokenTransaction,
+  ): Promise<ICustodyMintOrBurnSolanaTokenTransaction> {
     const { payerKeyPair, ownerKeyPair } = this.prepareSigners(dto.signers);
 
     return await this.signTokenTransaction(payerKeyPair, ownerKeyPair, dto.contractAddress, dto.recipientAddress, dto.amount, InstructionType.MINT);
   }
 
   async signBurnTokenTransaction(
-    dto: IPrivateKeyFilledBurnSolanaTokenTransaction,
-  ): Promise<ICustodyBurnSolanaTokenTransaction> {
+    dto: IPrivateKeyFilledMintOrBurnSolanaTokenTransaction,
+  ): Promise<ICustodyMintOrBurnSolanaTokenTransaction> {
     const { payerKeyPair, ownerKeyPair } = this.prepareSigners(dto.signers);
 
     return await this.signTokenTransaction(payerKeyPair, ownerKeyPair, dto.contractAddress, dto.recipientAddress, dto.amount, InstructionType.BURN);
