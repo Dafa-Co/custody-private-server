@@ -4,7 +4,7 @@ import { PrivateServerSignSwapTransactionDto, PrivateServerSignTransactionDto } 
 import { _MessagePatterns } from 'rox-custody_common-modules/libs/utils/microservice-constants';
 import { RmqController } from 'rox-custody_common-modules/libs/decorators/rmq-controller.decorator';
 import { IPrivateServerSignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
-
+import { IPrivateServerMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
 @RmqController()
 export class SigningTransactionRmqController {
   constructor(private readonly signingService: SigningTransactionService) { }
@@ -17,6 +17,16 @@ export class SigningTransactionRmqController {
   @MessagePattern({ cmd: _MessagePatterns.signContractTransaction })
   async signContractTransaction(@Payload() dto: IPrivateServerSignContractTransaction) {
     return this.signingService.signContractTransaction(dto);
+  }
+
+  @MessagePattern({ cmd: _MessagePatterns.signMintTokenTransaction })
+  async signMintTokenTransaction(@Payload() dto: IPrivateServerMintOrBurnTokenTransaction) {
+    return this.signingService.signMintTokenTransaction(dto);
+  }
+
+  @MessagePattern({ cmd: _MessagePatterns.signBurnTokenTransaction })
+  async signBurnTokenTransaction(@Payload() dto: IPrivateServerMintOrBurnTokenTransaction) {
+    return this.signingService.signBurnTokenTransaction(dto);
   }
 
   @MessagePattern({ cmd: _MessagePatterns.signSwapTransaction })
