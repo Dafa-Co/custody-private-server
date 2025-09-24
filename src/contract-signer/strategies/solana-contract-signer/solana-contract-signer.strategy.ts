@@ -11,11 +11,13 @@ import {
   createCreateMetadataAccountV3Instruction,
   PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
 } from "@metaplex-foundation/mpl-token-metadata";
-import { createAssociatedTokenAccountInstruction, createInitializeMintInstruction, createMintToInstruction, getAssociatedTokenAddress, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { createAssociatedTokenAccountInstruction, createInitializeMintInstruction, createMintToInstruction, createBurnInstruction, getAssociatedTokenAddress, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { IPrivateKeyFilledTransactionSigner } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import bs58 from 'bs58';
 import Decimal from 'decimal.js';
-
+import { IPrivateKeyFilledMintOrBurnSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
+import { ICustodyMintOrBurnSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
+import { InstructionType } from 'rox-custody_common-modules/libs/enums/contract-instruction-type.enum';
 @Injectable()
 export class SolanaContractSignerStrategy implements IContractSignerStrategy {
   private connection: Connection;
@@ -218,6 +220,86 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     return transaction;
   }
 
+  private async buildMintToExistingTransaction(
+    mintAddress: PublicKey,
+    recipientAddress: string,
+    amount: Decimal,
+    payerKeyPair: Keypair,
+    ownerKeyPair: Keypair,
+  ) {
+    return await this.buildTokenInstruction(mintAddress, recipientAddress, InstructionType.MINT, payerKeyPair, amount, ownerKeyPair);
+  }
+
+  private async buildBurnFromExistingTransaction(
+    mintAddress: PublicKey,
+    ownerAddress: string,
+    amount: Decimal,
+    payerKeyPair: Keypair,
+    ownerKeyPair: Keypair,
+  ) {
+    return await this.buildTokenInstruction(mintAddress, ownerAddress, InstructionType.BURN, payerKeyPair, amount, ownerKeyPair);
+  }
+
+  private async buildTokenInstruction(
+    mintAddress: PublicKey,
+    targetAddress: string,
+    type: InstructionType,
+    payerKeyPair: Keypair,
+    amount: Decimal,
+    targetKeyPair: Keypair,
+  ) {
+    const targetPubKey = new PublicKey(targetAddress);
+    const transaction = new Transaction();
+
+    const targetATAPublicKey = await getAssociatedTokenAddress(
+      mintAddress,
+      targetPubKey,
+      false
+    );
+
+    // ensure ATA exists (burn requires source account)
+    const ataInfo = await this.connection.getAccountInfo(targetATAPublicKey);
+
+    if (!ataInfo) {
+      transaction.add(
+        createAssociatedTokenAccountInstruction(
+          payerKeyPair.publicKey,
+          targetATAPublicKey,
+          targetPubKey,
+          mintAddress
+        )
+      );
+    }
+
+    if(type == InstructionType.BURN){
+      // Burn tokens from target's ATA
+      transaction.add(
+        createBurnInstruction(
+          targetATAPublicKey,
+          mintAddress,
+          targetKeyPair.publicKey,
+          BigInt(amount.toString()),
+        )
+      );
+    }else{
+      transaction.add(
+        createMintToInstruction(
+          mintAddress,
+          targetATAPublicKey,
+          targetKeyPair.publicKey,
+          BigInt(amount.toString()),
+        )
+      );
+    }
+
+    const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.lastValidBlockHeight = lastValidBlockHeight;
+    transaction.feePayer = payerKeyPair.publicKey;
+
+    return transaction;
+  }
+
   async signContractTransaction(
     dto: IPrivateKeyFilledSignSolanaContractTransaction,
   ): Promise<ICustodySignedSolanaContractTransaction> {
@@ -238,6 +320,68 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     return {
       transactionHash: sigBase58,
       contractAddress: mintKeyPair.publicKey.toBase58(),
+      signedTransaction: rawTx,
+      estimatedFee: new Decimal(estimatedFee),
+      error: null,
+    };
+  }
+
+  async signMintTokenTransaction(
+    dto: IPrivateKeyFilledMintOrBurnSolanaTokenTransaction,
+  ): Promise<ICustodyMintOrBurnSolanaTokenTransaction> {
+    const { payerKeyPair, ownerKeyPair } = this.prepareSigners(dto.signers);
+
+    return await this.signTokenTransaction(payerKeyPair, ownerKeyPair, dto.contractAddress, dto.recipientAddress, dto.amount, InstructionType.MINT);
+  }
+
+  async signBurnTokenTransaction(
+    dto: IPrivateKeyFilledMintOrBurnSolanaTokenTransaction,
+  ): Promise<ICustodyMintOrBurnSolanaTokenTransaction> {
+    const { payerKeyPair, ownerKeyPair } = this.prepareSigners(dto.signers);
+
+    return await this.signTokenTransaction(payerKeyPair, ownerKeyPair, dto.contractAddress, dto.recipientAddress, dto.amount, InstructionType.BURN);
+  }
+
+  private async signTokenTransaction(
+    payerKeyPair: Keypair,
+    ownerKeyPair: Keypair,
+    contractAddress: string,
+    recipientAddress: string,
+    amount: Decimal,
+    type: InstructionType
+  ){
+    let transaction: Transaction
+    if(type == InstructionType.MINT) {
+      transaction = await this.buildMintToExistingTransaction(
+        new PublicKey(contractAddress),
+        recipientAddress,
+        amount,
+        payerKeyPair,
+        ownerKeyPair,
+      );
+    }else{
+      transaction = await this.buildBurnFromExistingTransaction(
+        new PublicKey(contractAddress),
+        recipientAddress,
+        amount,
+        payerKeyPair,
+        ownerKeyPair,
+      );
+    }
+
+    transaction.sign(payerKeyPair, ownerKeyPair);
+
+    const rawTx = transaction.serialize();
+
+    const sigBase64 = transaction.signature.toString("base64");
+    const sigBytes = Buffer.from(sigBase64, "base64");
+    const sigBase58 = bs58.encode(new Uint8Array(sigBytes));
+
+    const estimatedFee = await transaction.getEstimatedFee(this.connection);
+
+    return {
+      transactionHash: sigBase58,
+      contractAddress: contractAddress,
       signedTransaction: rawTx,
       estimatedFee: new Decimal(estimatedFee),
       error: null,
