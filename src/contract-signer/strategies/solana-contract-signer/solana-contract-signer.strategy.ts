@@ -17,12 +17,7 @@ import bs58 from 'bs58';
 import Decimal from 'decimal.js';
 import { IPrivateKeyFilledMintOrBurnSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
 import { ICustodyMintOrBurnSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
-
-
-enum InstructionType {
-  MINT = 'MINT',
-  BURN = 'BURN',
-}
+import { InstructionType } from 'rox-custody_common-modules/libs/enums/contract-instruction-type.enum';
 @Injectable()
 export class SolanaContractSignerStrategy implements IContractSignerStrategy {
   private connection: Connection;
