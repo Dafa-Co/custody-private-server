@@ -11,6 +11,8 @@ import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/c
 import { EvmProtocols, WalletProtocols } from 'rox-custody_common-modules/libs/enums/wallets-protocols.enum';
 import { AccountAbstractionStrategyService } from './account-abstraction/account-abstraction-strategy.service';
 import { EoaStrategyService } from './eoa/eoa-strategy.service';
+import { Repository } from 'typeorm';
+import { PrivateKeyVersion } from 'src/keys-manager/entities/private-key-version.entity';
 
 @Injectable()
 export class EVMStrategyService implements IBlockChainPrivateServer {
@@ -20,10 +22,11 @@ export class EVMStrategyService implements IBlockChainPrivateServer {
         private readonly nonceManager: NonceManagerService,
         private readonly logger: CustodyLogger,
         private readonly protocol: WalletProtocols,
+        private readonly privateKeyVersionRepository: Repository<PrivateKeyVersion>,
     ) {
         switch (this.protocol) {
             case EvmProtocols.ERC_4337:
-                this.strategy = new AccountAbstractionStrategyService(this.nonceManager, this.logger);
+                this.strategy = new AccountAbstractionStrategyService(this.nonceManager, this.logger, this.privateKeyVersionRepository);
                 break;
             case EvmProtocols.EOA:
                 console.log('Using EOA strategy');
