@@ -11,6 +11,9 @@ import { Injectable } from '@nestjs/common';
 import { SolanaStrategyService } from './different-networks/solana-strategy.service';
 import { XrpStrategyService } from './different-networks/xrp-strategy.service';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { PrivateKeyVersion } from 'src/keys-manager/entities/private-key-version.entity';
+import { Repository } from 'typeorm';
 import { PolkadotStrategyService } from './different-networks/polkadot-strategy.service';
 import { StellarStrategyService } from './different-networks/stellar-strategy.service';
 import { WalletProtocols } from 'rox-custody_common-modules/libs/enums/wallets-protocols.enum';
@@ -22,7 +25,9 @@ export class BlockchainFactoriesService {
 
   constructor(
     private readonly nonceManager: NonceManagerService,
-    private readonly logger: CustodyLogger
+    private readonly logger: CustodyLogger,
+    @InjectRepository(PrivateKeyVersion)
+    private readonly privateKeyVersionRepository: Repository<PrivateKeyVersion>,
   ) { }
 
   async getStrategy(asset: CommonAsset, protocol: WalletProtocols): Promise<IBlockChainPrivateServer> {
@@ -37,7 +42,7 @@ export class BlockchainFactoriesService {
 
     switch (category) {
       case NetworkCategory.EVM:
-        strategy = new EVMStrategyService(this.nonceManager, this.logger, protocol);
+        strategy = new EVMStrategyService(this.nonceManager, this.logger, protocol, this.privateKeyVersionRepository);
         break;
 
       case NetworkCategory.BitCoin:

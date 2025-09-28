@@ -1,12 +1,22 @@
-import { Chain, createWalletClient, encodeFunctionData, hashTypedData, http } from 'viem';
+import {
+  Chain,
+  createWalletClient,
+  encodeAbiParameters,
+  encodeFunctionData,
+  hashTypedData,
+  http,
+  PrivateKeyAccount,
+} from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import {
-  BiconomySmartAccountV2,
-  createSmartAccountClient,
-  PaymasterMode,
+  createSmartAccountClient as createV2Client,
   Transaction,
-  UserOperationStruct,
 } from '@biconomy/account';
+import {
+  createBicoPaymasterClient,
+  createSmartAccountClient as createNexusClient,
+  toNexusAccount,
+} from '@biconomy/abstractjs';
 import {
   CommonAsset,
   AssetType,
@@ -21,31 +31,59 @@ import {
   SignedTransaction,
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
 import { secretsTypes, throwOrReturn } from 'account-abstraction.secret';
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
-import { PrivateKeyFilledSignSwapTransactionDto, PrivateKeyFilledSignTransactionDto } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  PrivateKeyFilledSignSwapTransactionDto,
+  PrivateKeyFilledSignTransactionDto,
+  PrivateServerSignSwapTransactionDto,
+  PrivateServerSignTransactionDto,
+} from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
 import { NonceManagerService } from 'src/nonce-manager/nonce-manager.service';
 const abi = require('erc-20-abi');
 import { Web3 } from 'web3';
-import { EvmHelper } from 'src/utils/helpers/evm.helper';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { HexString } from 'rox-custody_common-modules/libs/types/hex-string.type';
-import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
+import { BiconomyAccountTypeEnum } from 'src/utils/enums/biconomy-account-type.enum';
+import { ISmartAccount } from './interfaces/smart-account.interface';
+import { V2SmartAccount } from './implementations/v2-smart-account';
+import { NexusSmartAccount } from './implementations/nexus-smart-account';
+import { IConvertPrivateKeyToSmartAccountResult } from 'src/utils/interfaces/convert-private-key-to-smart-account-result.interface';
+import {
+  ENTRY_POINT_ADDRESS_V6,
+  ENTRY_POINT_ADDRESS_V7,
+  NEXUS_BOOTSTRAP_ADDRESS,
+  NEXUS_IMPLEMENTATION_ADDRESS,
+  NEXUS_SUPPORTED_NETWORK_IDS,
+} from './constants/nexus.constants';
+import { isDefined } from 'class-validator';
+import { CustomUserOperation } from 'rox-custody_common-modules/libs/interfaces/custom-user-operation.interface';
+import { convertBigIntsToStrings } from 'src/utils/helpers/convert-big-ints-to-strings';
+import { Repository } from 'typeorm';
+import { PrivateKeyVersion } from 'src/keys-manager/entities/private-key-version.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { EvmHelper } from 'src/utils/helpers/evm.helper';
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
+import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 
 @Injectable()
 export class AccountAbstractionStrategyService
-  implements IBlockChainPrivateServer {
+  implements IBlockChainPrivateServer
+{
   private asset: CommonAsset;
   private chain: Chain;
-  private bundlerUrl: string;
-  private paymasterUrl: string;
+  private v2BundlerUrl: string;
+  private v3BundlerUrl: string;
+  private v1PaymasterUrl: string;
+  private v2PaymasterUrl: string;
   private web3: Web3;
 
   constructor(
     private readonly nonceManager: NonceManagerService,
-    private readonly logger: CustodyLogger
-  ) { }
+    private readonly logger: CustodyLogger,
+    @InjectRepository(PrivateKeyVersion)
+    private readonly privateKeyVersionRepository: Repository<PrivateKeyVersion>,
+  ) {}
 
   async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
     const { asset } = initData;
@@ -55,25 +93,31 @@ export class AccountAbstractionStrategyService
 
     this.chain = networkObject.chain;
 
-    const bundlerSecret = networkObject.isTest
-      ? throwOrReturn(secretsTypes.bundler, 'testnet')
-      : throwOrReturn(secretsTypes.bundler, 'mainnet');
-    const paymasterApiKey = throwOrReturn(
-      secretsTypes.paymaster,
+    const v2BundlerApiKey = networkObject.isTest
+      ? throwOrReturn(secretsTypes.v2Bundler, 'testnet')
+      : throwOrReturn(secretsTypes.v2Bundler, 'mainnet');
+    const v3BundlerApiKey = throwOrReturn(
+      secretsTypes.v3Bundler,
+      asset.networkId.toString(),
+    );
+    const v1PaymasterApiKey = throwOrReturn(
+      secretsTypes.v1Paymaster,
+      asset.networkId.toString(),
+    );
+    const v2PaymasterApiKey = throwOrReturn(
+      secretsTypes.v2Paymaster,
       asset.networkId.toString(),
     );
 
-    if (!bundlerSecret || !paymasterApiKey) {
-      throw new InternalServerErrorException(
-        'Bundler secret or paymaster api key not found',
-      );
-    }
-
-    this.bundlerUrl = `https://bundler.biconomy.io/api/v2/${this.chain.id}/${bundlerSecret}`;
-    this.paymasterUrl = `https://paymaster.biconomy.io/api/v1/${this.chain.id}/${paymasterApiKey}`;
+    this.v2BundlerUrl = `https://bundler.biconomy.io/api/v2/${this.chain.id}/${v2BundlerApiKey}`;
+    this.v3BundlerUrl = `https://bundler.biconomy.io/api/v3/${this.chain.id}/${v3BundlerApiKey}`;
+    this.v1PaymasterUrl = `https://paymaster.biconomy.io/api/v1/${this.chain.id}/${v1PaymasterApiKey}`;
+    this.v2PaymasterUrl = `https://paymaster.biconomy.io/api/v2/${this.chain.id}/${v2PaymasterApiKey}`;
 
     // Initialize Web3 with your RPC provider
-    this.web3 = new Web3(new Web3.providers.HttpProvider(this.chain.rpcUrls.default.http[0]));
+    this.web3 = new Web3(
+      new Web3.providers.HttpProvider(this.chain.rpcUrls.default.http[0]),
+    );
   }
 
   async isContractDeployed(address: string): Promise<boolean> {
@@ -87,12 +131,44 @@ export class AccountAbstractionStrategyService
     }
   }
 
-  private convertPrivateKeyToSmartAccount(privateKey: string) {
-    const account = privateKeyToAccount(privateKey as any);
+  private async createNexusClient(
+    eoaAccount: PrivateKeyAccount,
+    withPaymaster: boolean = true,
+    v2Address?: HexString,
+  ) {
+    const nexusAccount = await toNexusAccount({
+      signer: eoaAccount,
+      chain: this.chain,
+      transport: http(this.chain.rpcUrls.default.http[0], {
+        retryCount: 5,
+        retryDelay: 2000,
+      }),
+      accountAddress: v2Address, // will be undefined when not passed
+      pollingInterval: 2000,
+    });
 
+    const nexusClient = createNexusClient({
+      account: nexusAccount,
+      transport: http(this.v3BundlerUrl),
+      paymaster: withPaymaster
+        ? createBicoPaymasterClient({
+            transport: http(this.v2PaymasterUrl),
+          })
+        : undefined,
+    });
+
+    return nexusClient;
+  }
+
+  private async convertPrivateKeyToSmartAccount(
+    privateKey: string,
+    privateKeyId?: number,
+    withPaymaster: boolean = true,
+  ): Promise<IConvertPrivateKeyToSmartAccountResult> {
+    const eoaAccount = privateKeyToAccount(privateKey as any);
 
     const client = createWalletClient({
-      account,
+      account: eoaAccount,
       chain: this.chain,
       transport: http(this.chain.rpcUrls.default.http[0], {
         retryCount: 5,
@@ -101,118 +177,254 @@ export class AccountAbstractionStrategyService
       pollingInterval: 2000,
     });
 
-
-    const smartAccount = createSmartAccountClient({
+    const v2Account = await createV2Client({
       signer: client,
-      bundlerUrl: this.bundlerUrl,
-      paymasterUrl: this.paymasterUrl,
+      bundlerUrl: this.v2BundlerUrl,
+      paymasterUrl: withPaymaster ? this.v1PaymasterUrl : undefined,
     });
 
-    return smartAccount;
+    const v2SmartAccount = new V2SmartAccount(v2Account, withPaymaster);
+
+    const v2AccountAddress = await v2SmartAccount.getAddress();
+
+    if (!NEXUS_SUPPORTED_NETWORK_IDS.includes(this.asset.networkId)) {
+      return {
+        account: v2SmartAccount,
+        type: BiconomyAccountTypeEnum.smartAccountV2,
+      };
+    }
+
+    const isV2Deployed = await v2SmartAccount.isAccountDeployed();
+
+    if (!isV2Deployed && isDefined(privateKeyId)) {
+      const privateKeyVersion =
+        await this.privateKeyVersionRepository.findOneBy({
+          privateKeyId,
+        });
+
+      if (!isDefined(privateKeyVersion) || privateKeyVersion.version === 0) {
+        return {
+          account: v2SmartAccount,
+          type: BiconomyAccountTypeEnum.smartAccountV2,
+        };
+      }
+    }
+
+    const nexusClient = await this.createNexusClient(
+      eoaAccount,
+      withPaymaster,
+      isV2Deployed ? v2AccountAddress : undefined,
+    );
+
+    const nexusSmartAccount = new NexusSmartAccount(nexusClient);
+
+    if (!isV2Deployed) {
+      return {
+        account: nexusSmartAccount,
+        type: BiconomyAccountTypeEnum.nexusAccount,
+      };
+    } else {
+      const isNexusDeployed = await nexusSmartAccount.isAccountDeployed();
+
+      if (isNexusDeployed) {
+        return {
+          account: nexusSmartAccount,
+          type: BiconomyAccountTypeEnum.nexusAccount,
+        };
+      } else {
+        return {
+          account: v2SmartAccount,
+          type: BiconomyAccountTypeEnum.smartAccountV2,
+          shouldMigrate: true,
+        };
+      }
+    }
+  }
+
+  private async getSmartAccount(privateKey: string) {
+    const { account, type } =
+      await this.convertPrivateKeyToSmartAccount(privateKey);
+
+    return {
+      account,
+      version: type === BiconomyAccountTypeEnum.smartAccountV2 ? 0 : 1,
+    };
   }
 
   async createWallet(): Promise<IWalletKeys> {
     const privateKey = generatePrivateKey();
 
-    const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
+    const { account, version } = await this.getSmartAccount(privateKey);
 
-    const address = await smartAccount.getAccountAddress();
+    const address = await account.getAddress();
 
-    const { address: eoaAddress } = this.web3.eth.accounts.privateKeyToAccount(privateKey);
+    const eoaAddress = await account.getEOAAddress();
 
     return {
       privateKey,
       address,
       eoaAddress,
+      version,
     };
   }
 
-  private async buildSignedTransaction(
-    smartAccount: BiconomySmartAccountV2,
-    to: HexString,
-    valueSmallUnit: bigint,
-    data: string | null,
+  private async buildSignedUserOp(
+    account: ISmartAccount,
+    calls: Transaction[],
     nonce: number,
-    isGasless: boolean,
   ): Promise<SignedTransaction | null> {
     try {
-      const tokenTransaction: Transaction = {
-        to,
-        data,
-      };
-      const CoinTransaction: Transaction = {
-        to,
-        value: valueSmallUnit,
-      };
-
-      const transactionBody = data ? tokenTransaction : CoinTransaction;
-
       // Directly build the user operation without retrying here
-      const transaction = await (
-        isGasless ?
-          this.retryBuildUserOp(
-            smartAccount,
-            [transactionBody],
-            nonce,
-          ) :
-          this.retryBuildUserOpWithoutPaymaster(
-            smartAccount,
-            [transactionBody],
-            nonce,
-          )
-      );
+      const userOp = await this.retryBuildUserOp(account, calls, nonce);
 
-      if (!transaction) {
+      if (!userOp) {
         return null;
       }
 
-      const signedTransaction = await smartAccount.signUserOp(transaction);
+      const signedUserOp = await account.signUserOp(userOp);
 
-      return signedTransaction;
+      return signedUserOp;
     } catch (error) {
-      this.logger.notification('Error while building or signing user operations:', error);
+      this.logger.error(
+        'Error while building or signing user operations:',
+        error,
+      );
       return null; // Or handle the failure as appropriate
     }
   }
 
   private async retryBuildUserOp(
-    smartAccount: BiconomySmartAccountV2,
-    transactionBody: Transaction[],
+    account: ISmartAccount,
+    calls: Transaction[],
     nonce: number,
     maxRetries: number = 5,
     attempt: number = 0,
-  ): Promise<Partial<UserOperationStruct> | null> {
+  ): Promise<Partial<CustomUserOperation> | null> {
     try {
-      const transaction = await smartAccount.buildUserOp(transactionBody, {
-        paymasterServiceData: { mode: PaymasterMode.SPONSORED },
-        nonceOptions: { nonceKey: nonce },
-      });
-
-      return transaction;
+      return await account.buildUserOp(calls, nonce);
     } catch (error) {
+      console.error(error);
       if (attempt < maxRetries) {
         return this.retryBuildUserOp(
-          smartAccount,
-          transactionBody,
+          account,
+          calls,
           nonce,
           maxRetries,
           attempt + 1,
         );
       } else {
-        this.logger.error(`Error in buildUserOp after retries: ${error.stack ?? error.message}`);
+        this.logger.error('Error in buildUserOp after retries:', error);
         return null; // Return null or throw depending on your error handling strategy
       }
     }
   }
 
+  private addNexusMigrationCalls(
+    calls: Transaction[],
+    v2AccountAddress: HexString,
+    eoaAddress: HexString,
+  ) {
+    const updateImplementationCalldata = encodeFunctionData({
+      abi: [
+        {
+          name: 'updateImplementation',
+          type: 'function',
+          stateMutability: 'nonpayable',
+          inputs: [{ type: 'address', name: 'newImplementation' }],
+          outputs: [],
+        },
+      ],
+      functionName: 'updateImplementation',
+      args: [NEXUS_IMPLEMENTATION_ADDRESS],
+    });
+
+    const updateImplementationTransaction = {
+      to: v2AccountAddress,
+      data: updateImplementationCalldata,
+    };
+
+    const initData = encodeFunctionData({
+      abi: [
+        {
+          name: 'initNexusWithDefaultValidator',
+          type: 'function',
+          stateMutability: 'nonpayable',
+          inputs: [{ type: 'bytes', name: 'data' }],
+          outputs: [],
+        },
+      ],
+      functionName: 'initNexusWithDefaultValidator',
+      args: [eoaAddress as HexString],
+    });
+
+    const initDataWithBootstrap = encodeAbiParameters(
+      [
+        { name: 'bootstrap', type: 'address' },
+        { name: 'initData', type: 'bytes' },
+      ],
+      [NEXUS_BOOTSTRAP_ADDRESS, initData],
+    );
+
+    // Create initializeAccount calldata
+    const initializeNexusCalldata = encodeFunctionData({
+      abi: [
+        {
+          name: 'initializeAccount',
+          type: 'function',
+          stateMutability: 'nonpayable',
+          inputs: [{ type: 'bytes', name: 'data' }],
+          outputs: [],
+        },
+      ],
+      functionName: 'initializeAccount',
+      args: [initDataWithBootstrap],
+    });
+
+    const initializeNexusTransaction = {
+      to: v2AccountAddress,
+      data: initializeNexusCalldata,
+    };
+
+    return [
+      updateImplementationTransaction,
+      initializeNexusTransaction,
+      ...calls,
+    ];
+  }
+
+  private async migrateToNexusAccountIfNeeded(
+    account: ISmartAccount,
+    calls: Transaction[],
+    type: BiconomyAccountTypeEnum,
+    shouldMigrate?: boolean,
+  ) {
+    if (shouldMigrate) {
+      if (type === BiconomyAccountTypeEnum.nexusAccount) {
+        throw new InternalServerErrorException(
+          'Account is already migrated to Nexus',
+        );
+      }
+
+      const v2AccountAddress = await account.getAddress();
+      const eoaAddress = await account.getEOAAddress();
+
+      this.logger.info(
+        `Migrating account ${v2AccountAddress} to Nexus account`,
+      );
+
+      calls = this.addNexusMigrationCalls(calls, v2AccountAddress, eoaAddress);
+    }
+
+    return calls;
+  }
+
   async getSignedTransaction(
     dto: PrivateKeyFilledSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { amount, asset, to, transactionId, signers, isGasless } =
-      dto;
+    const { amount, asset, to, transactionId, signers } = dto;
 
     const sender = getSignerFromSigners(signers, SignerTypeEnum.SENDER, true);
-
+    
     const keyId = sender.keyId;
     const privateKey = sender.privateKey;
 
@@ -220,12 +432,21 @@ export class AccountAbstractionStrategyService
       this.nonceManager.getNonce(keyId, asset.networkId),
     ]);
 
-    const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
+    const { account, type, shouldMigrate } =
+      await this.convertPrivateKeyToSmartAccount(privateKey, keyId);
 
     const valueSmallUnit = BigInt(amount.toString());
 
-    let data: string | null = null;
-    if (this.asset.type === AssetType.TOKEN || this.asset.type === AssetType.CUSTOM_TOKEN) {
+    let actualTo = to as HexString;
+    let actualValue = valueSmallUnit;
+    let data: string = undefined;
+
+    if (
+      this.asset.type === AssetType.TOKEN ||
+      this.asset.type === AssetType.CUSTOM_TOKEN
+    ) {
+      actualTo = this.asset.contract_address as HexString;
+      actualValue = undefined;
       data = encodeFunctionData({
         abi: abi,
         functionName: 'transfer',
@@ -233,25 +454,39 @@ export class AccountAbstractionStrategyService
       });
     }
 
-    const signedTransaction = await this.buildSignedTransaction(
-      smartAccount,
-      this.asset.type === AssetType.COIN
-        ? (to as HexString)
-        : (this.asset.contract_address as HexString),
-      valueSmallUnit,
-      data,
-      nonce,
-      isGasless,
+    let calls: Transaction[] = [
+      {
+        to: actualTo,
+        value: actualValue,
+        data,
+      },
+    ];
+
+    calls = await this.migrateToNexusAccountIfNeeded(
+      account,
+      calls,
+      type,
+      shouldMigrate,
     );
 
+    const signedUserOp = await this.buildSignedUserOp(account, calls, nonce);
+
+    const parsedSignedUserOp = convertBigIntsToStrings(signedUserOp);
+
     return {
-      bundlerUrl: this.bundlerUrl,
-      signedTransaction: signedTransaction,
+      bundlerUrl:
+        type === BiconomyAccountTypeEnum.nexusAccount
+          ? this.v3BundlerUrl
+          : this.v2BundlerUrl,
+      signedTransaction: parsedSignedUserOp,
       transactionId: transactionId,
+      entryPointAddress:
+        type === BiconomyAccountTypeEnum.nexusAccount
+          ? ENTRY_POINT_ADDRESS_V7
+          : ENTRY_POINT_ADDRESS_V6,
       error: null,
     };
   }
-
 
   async getSignedSwapTransaction(
     dto: PrivateKeyFilledSignSwapTransactionDto,
@@ -261,7 +496,7 @@ export class AccountAbstractionStrategyService
       const { permit2 } = swapTransaction;
 
       const sender = getSignerFromSigners(signers, SignerTypeEnum.SENDER, true);
-
+      
       const keyId = sender.keyId;
       const privateKey = sender.privateKey;
 
@@ -269,25 +504,43 @@ export class AccountAbstractionStrategyService
       const txParams = this.extractTransactionParams(swapTransaction);
 
       // Get nonce and smart account
-      const { nonce, smartAccount } = await this.prepareSwapAccountData(keyId, privateKey);
+      const { nonce, account, type, shouldMigrate } =
+        await this.prepareSwapAccountData(keyId, privateKey);
 
       // Handle permit2 signature and prepare final transaction data
-      const finalTxData = await this.prepareTransactionData(txParams.data, permit2, privateKey);
-
-      // Build and sign the swap transaction
-      const signedTransaction = await this.buildAndSignSwapTransaction(
-        smartAccount,
-        txParams,
-        finalTxData,
-        nonce
+      const finalTxData = await this.prepareTransactionData(
+        keyId,
+        txParams.data,
+        permit2,
+        privateKey,
       );
 
-      // Return success response
-      return this.createSwapTransactionResponse(signedTransaction, transactionId, null);
+      // Build and sign the swap transaction
+      const signedUserOp = await this.buildAndSignSwapTransaction(
+        account,
+        txParams,
+        finalTxData,
+        nonce,
+        type,
+        shouldMigrate,
+      );
 
+      const parsedSignedUserOp = convertBigIntsToStrings(signedUserOp);
+
+      // Return success response
+      return this.createSwapTransactionResponse(
+        parsedSignedUserOp,
+        transactionId,
+        null,
+        type,
+      );
     } catch (error) {
-      this.logger.notification('Error in getSignedSwapTransaction:', error);
-      return this.createSwapTransactionResponse(null, dto.transactionId, error.message || 'Unknown error occurred');
+      this.logger.error('Error in getSignedSwapTransaction:', error);
+      return this.createSwapTransactionResponse(
+        null,
+        dto.transactionId,
+        error.message || 'Unknown error occurred',
+      );
     }
   }
 
@@ -299,37 +552,42 @@ export class AccountAbstractionStrategyService
       data,
       gas: BigInt(gas),
       gasPrice: BigInt(gasPrice),
-      value: BigInt(value)
+      value: BigInt(value),
     };
   }
 
   // Prepare nonce and smart account
-  private async prepareSwapAccountData(keyId: number, privateKey: string): Promise<{ nonce: number, smartAccount: BiconomySmartAccountV2 }> {
+  private async prepareSwapAccountData(keyId: number, privateKey: string) {
     const [nonce] = await Promise.all([
       this.nonceManager.getNonce(keyId, this.asset.networkId),
     ]);
 
-    const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
+    const { account, type, shouldMigrate } =
+      await this.convertPrivateKeyToSmartAccount(privateKey, keyId, false); // without paymaster
 
     return {
       nonce,
-      smartAccount
+      account,
+      type,
+      shouldMigrate,
     };
   }
 
   // Handle permit2 signature and prepare final transaction data
   private async prepareTransactionData(
+    privateKeyId: number,
     data: string,
     permit2: any,
-    privateKey: string
+    privateKey: string,
   ): Promise<string> {
     if (permit2?.eip712) {
-      const permit2Signature = await this.signPermit2MessageWithSmartAccount(permit2.eip712, privateKey);
-
-      return this.appendSignatureToTxData(
-        data as HexString,
-        permit2Signature
+      const permit2Signature = await this.signPermit2MessageWithSmartAccount(
+        privateKeyId,
+        permit2.eip712,
+        privateKey,
       );
+
+      return this.appendSignatureToTxData(data as HexString, permit2Signature);
     }
 
     return data;
@@ -337,27 +595,33 @@ export class AccountAbstractionStrategyService
 
   // Build and sign the swap transaction
   private async buildAndSignSwapTransaction(
-    smartAccount: BiconomySmartAccountV2,
+    account: ISmartAccount,
     txParams: any,
     finalTxData: string,
-    nonce: number
+    nonce: number,
+    type: BiconomyAccountTypeEnum,
+    shouldMigrate: boolean,
   ): Promise<SignedTransaction | null> {
-    // Create transaction object
-    const transaction = this.createSwapTransactionObject(txParams, finalTxData);
+    // Create call object
+    const call = this.createSwapTransactionObject(txParams, finalTxData);
 
-    // Build user operation without paymaster
-    const userOp = await this.buildUserOpForSwap(smartAccount, transaction, nonce);
+    let calls: Transaction[] = [call];
 
-    if (!userOp) {
-      return null;
-    }
+    calls = await this.migrateToNexusAccountIfNeeded(
+      account,
+      calls,
+      type,
+      shouldMigrate,
+    );
 
-    // Sign the user operation
-    return await smartAccount.signUserOp(userOp);
+    return this.buildSignedUserOp(account, calls, nonce);
   }
 
   // Create the transaction object
-  private createSwapTransactionObject(txParams: any, finalTxData: string): Transaction {
+  private createSwapTransactionObject(
+    txParams: any,
+    finalTxData: string,
+  ): Transaction {
     return {
       to: txParams.to,
       data: finalTxData,
@@ -365,105 +629,56 @@ export class AccountAbstractionStrategyService
     };
   }
 
-  // Build user operation for swap
-  private async buildUserOpForSwap(
-    smartAccount: BiconomySmartAccountV2,
-    transaction: Transaction,
-    nonce: number,
-  ): Promise<Partial<UserOperationStruct> | null> {
-    return await this.retryBuildUserOpWithoutPaymaster(
-      smartAccount,
-      [transaction],
-      nonce,
-    );
-  }
-
   // Create response object
-  private createSwapTransactionResponse(signedTransaction: SignedTransaction | null, transactionId: number, error: string | null) {
+  private createSwapTransactionResponse(
+    signedTransaction: SignedTransaction | null,
+    transactionId: number,
+    error: string | null,
+    type?: BiconomyAccountTypeEnum,
+  ) {
     return {
-      bundlerUrl: this.bundlerUrl,
+      bundlerUrl:
+        isDefined(type) && type === BiconomyAccountTypeEnum.nexusAccount
+          ? this.v3BundlerUrl
+          : this.v2BundlerUrl,
       signedTransaction: signedTransaction,
       transactionId: transactionId,
+      entryPointAddress:
+        isDefined(type) && type === BiconomyAccountTypeEnum.nexusAccount
+          ? ENTRY_POINT_ADDRESS_V7
+          : ENTRY_POINT_ADDRESS_V6,
       error: error,
     };
-  }
-
-  // Refactored retryBuildUserOpWithoutPaymaster with smaller functions
-  private async retryBuildUserOpWithoutPaymaster(
-    smartAccount: BiconomySmartAccountV2,
-    transactionBody: Transaction[],
-    nonce: number,
-    maxRetries: number = 5,
-    attempt: number = 0,
-  ): Promise<Partial<UserOperationStruct> | null> {
-    try {
-      return await this.buildUserOpWithoutPaymaster(smartAccount, transactionBody, nonce);
-    } catch (error) {
-      return await this.handleBuildUserOpRetry(
-        smartAccount,
-        transactionBody,
-        nonce,
-        maxRetries,
-        attempt,
-        error
-      );
-    }
-  }
-
-  // Build user operation without paymaster
-  private async buildUserOpWithoutPaymaster(
-    smartAccount: BiconomySmartAccountV2,
-    transactionBody: Transaction[],
-    nonce: number
-  ): Promise<Partial<UserOperationStruct>> {
-    return await smartAccount.buildUserOp(transactionBody, {
-      nonceOptions: { nonceKey: nonce },
-    });
-  }
-
-  // Handle retry logic for building user operation
-  private async handleBuildUserOpRetry(
-    smartAccount: BiconomySmartAccountV2,
-    transactionBody: Transaction[],
-    nonce: number,
-    maxRetries: number,
-    attempt: number,
-    error: any
-  ): Promise<Partial<UserOperationStruct> | null> {
-    if (attempt < maxRetries) {
-      this.logger.error(
-        `Retrying buildUserOpWithoutPaymaster... Attempt ${attempt + 1} of ${maxRetries}`,
-      );
-      return this.retryBuildUserOpWithoutPaymaster(
-        smartAccount,
-        transactionBody,
-        nonce,
-        maxRetries,
-        attempt + 1,
-      );
-    } else {
-      this.logger.error('Error in buildUserOpWithoutPaymaster after retries:', error);
-      return null;
-    }
   }
 
   // Refactored signature appending functions
   private appendSignatureToTxData(
     transactionData: HexString,
-    signature: HexString
+    signature: HexString,
   ): HexString {
     const signatureLengthInHex = this.convertSignatureLengthToHex(signature);
-    return this.concatenateTransactionDataWithSignature(transactionData, signatureLengthInHex, signature);
+    return this.concatenateTransactionDataWithSignature(
+      transactionData,
+      signatureLengthInHex,
+      signature,
+    );
   }
 
-
-  private async signPermit2MessageWithSmartAccount(eip712Data: any, privateKey: string): Promise<HexString> {
-    const smartAccount = await this.convertPrivateKeyToSmartAccount(privateKey);
+  private async signPermit2MessageWithSmartAccount(
+    privateKeyId: number,
+    eip712Data: any,
+    privateKey: string,
+  ): Promise<HexString> {
+    const { account } = await this.convertPrivateKeyToSmartAccount(
+      privateKey,
+      privateKeyId,
+      false,
+    );
 
     try {
       // Hash the EIP-712 data first
       const messageHash = this.callHashTypedData(eip712Data);
-      return await smartAccount.signMessage(messageHash);
+      return await account.signMessage(messageHash);
     } catch (error) {
       this.logger.notification('Error signing with smart account:', error);
     }
@@ -484,7 +699,7 @@ export class AccountAbstractionStrategyService
   private convertSignatureLengthToHex(signature: HexString): HexString {
     return EvmHelper.numberToHex(signature.length / 2 - 1, {
       size: 32,
-      signed: false
+      signed: false,
     });
   }
 
@@ -492,8 +707,12 @@ export class AccountAbstractionStrategyService
   private concatenateTransactionDataWithSignature(
     transactionData: HexString,
     signatureLengthInHex: HexString,
-    signature: HexString
+    signature: HexString,
   ): HexString {
-    return EvmHelper.concatHex([transactionData, signatureLengthInHex, signature]);
+    return EvmHelper.concatHex([
+      transactionData,
+      signatureLengthInHex,
+      signature,
+    ]);
   }
 }
