@@ -14,15 +14,9 @@ import { PrivateKeyVersion } from 'src/keys-manager/entities/private-key-version
   ],
   providers: [
     BlockchainFactoriesService,
-    AccountAbstractionStrategyService,
-    BitcoinStrategyService,
-    TronStrategyService,
   ],
   exports: [
     BlockchainFactoriesService,
-    AccountAbstractionStrategyService,
-    BitcoinStrategyService,
-    TronStrategyService,
   ],
 })
 export class BlockchainModule {}

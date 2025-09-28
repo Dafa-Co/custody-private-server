@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { IPrivateKeyFilledTransactionSigner, IPrivateServerTransactionSigner, PrivateKeyFilledSignTransactionDto, PrivateServerSignSwapTransactionDto, PrivateServerSignTransactionDto } from '../../rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
+import {
+  IPrivateKeyFilledTransactionSigner,
+  IPrivateServerTransactionSigner,
+  PrivateServerSignSwapTransactionDto,
+  PrivateServerSignTransactionDto,
+} from '../../rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import {
   CustodySignedTransaction,
 } from 'rox-custody_common-modules/libs/interfaces/custom-signed-transaction.type';
@@ -7,8 +12,9 @@ import { BlockchainFactoriesService } from 'src/blockchain/blockchain-strategies
 import { KeysManagerService } from 'src/keys-manager/keys-manager.service';
 import { ContractSignerStrategiesService } from 'src/contract-signer/contract-signer-strategies.service';
 import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/libs/interfaces/contract-transaction.interface';
-import { isDefined } from 'class-validator';
-import { IPrivateServerSignContractTransaction, ISignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
+import { IPrivateServerSignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
+import { ICustodyMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
+import { IPrivateServerMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
 
 @Injectable()
 export class SigningTransactionService {
@@ -41,12 +47,12 @@ export class SigningTransactionService {
   async signTransaction(
     dto: PrivateServerSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { asset, corporateId } = dto;
+    const { asset, corporateId, protocol } = dto;
 
     const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
 
     const blockchainFactory =
-      await this.blockchainFactoriesService.getStrategy(asset);
+      await this.blockchainFactoriesService.getStrategy(asset, protocol);
 
     return await blockchainFactory.getSignedTransaction({
       ...dto,
@@ -72,15 +78,51 @@ export class SigningTransactionService {
     );
   }
 
+  async signMintTokenTransaction(
+    dto: IPrivateServerMintOrBurnTokenTransaction,
+  ): Promise<ICustodyMintOrBurnTokenTransaction> {
+    const { corporateId, networkId } = dto;
+
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
+
+    const contractSignerStrategy =
+      await this.contractSignerFactory.getContractSignerStrategy(networkId);
+
+    return await contractSignerStrategy.signMintTokenTransaction(
+      {
+        ...dto,
+        signers,
+      }
+    );
+  }
+
+  async signBurnTokenTransaction(
+    dto: IPrivateServerMintOrBurnTokenTransaction,
+  ): Promise<ICustodyMintOrBurnTokenTransaction> {
+    const { corporateId, networkId } = dto;
+
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
+
+    const contractSignerStrategy =
+      await this.contractSignerFactory.getContractSignerStrategy(networkId);
+
+    return await contractSignerStrategy.signBurnTokenTransaction(
+      {
+        ...dto,
+        signers,
+      }
+    );
+  }
+
   async signSwapTransaction(
     dto: PrivateServerSignSwapTransactionDto,
   ): Promise<CustodySignedTransaction> {
-    const { asset, corporateId } = dto;
+    const { asset, corporateId, protocol } = dto;
 
     const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
 
     const blockchainFactory =
-      await this.blockchainFactoriesService.getStrategy(asset);
+      await this.blockchainFactoriesService.getStrategy(asset, protocol);
 
     return await blockchainFactory.getSignedSwapTransaction({
       ...dto,

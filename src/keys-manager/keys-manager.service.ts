@@ -47,6 +47,7 @@ export class KeysManagerService {
       corporateId,
       apiApprovalEssential: { percentageToStoreInCustody },
       idempotentKey: idk,
+      protocol,
     } = dto;
 
     const idempotentKey = idk ?? uuidv4();
@@ -60,7 +61,7 @@ export class KeysManagerService {
       .orUpdate(['idempotentKey'])
       .execute();
 
-    const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset);
+    const blockchainFactory = await this.blockchainFactoriesService.getStrategy(asset, protocol);
     const wallet = await blockchainFactory.createWallet();
     const { address, privateKey, eoaAddress, version } = wallet;
 

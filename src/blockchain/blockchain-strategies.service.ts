@@ -17,6 +17,8 @@ import { PrivateKeyVersion } from 'src/keys-manager/entities/private-key-version
 import { Repository } from 'typeorm';
 import { PolkadotStrategyService } from './different-networks/polkadot-strategy.service';
 import { StellarStrategyService } from './different-networks/stellar-strategy.service';
+import { WalletProtocols } from 'rox-custody_common-modules/libs/enums/wallets-protocols.enum';
+import { EVMStrategyService } from './different-networks/evm/evm-strategy.service';
 
 @Injectable()
 export class BlockchainFactoriesService {
@@ -29,7 +31,7 @@ export class BlockchainFactoriesService {
     private readonly privateKeyVersionRepository: Repository<PrivateKeyVersion>,
   ) { }
 
-  async getStrategy(asset: CommonAsset): Promise<IBlockChainPrivateServer> {
+  async getStrategy(asset: CommonAsset, protocol: WalletProtocols): Promise<IBlockChainPrivateServer> {
     this.asset = asset;
     let strategy: IBlockChainPrivateServer;
 
@@ -41,7 +43,11 @@ export class BlockchainFactoriesService {
 
     switch (category) {
       case NetworkCategory.EVM:
+<<<<<<< HEAD
         strategy = new AccountAbstractionStrategyService(this.nonceManager, this.logger, this.privateKeyVersionRepository);
+=======
+        strategy = new EVMStrategyService(this.nonceManager, this.logger, protocol);
+>>>>>>> 121cfe932097ea23994cdde189176c89ceb170ba
         break;
 
       case NetworkCategory.BitCoin:
