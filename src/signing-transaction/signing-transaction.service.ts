@@ -15,6 +15,7 @@ import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/li
 import { IPrivateServerSignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { ICustodyMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
 import { IPrivateServerMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
+import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 
 @Injectable()
 export class SigningTransactionService {
@@ -22,6 +23,7 @@ export class SigningTransactionService {
     private readonly blockchainFactoriesService: BlockchainFactoriesService,
     private readonly contractSignerFactory: ContractSignerStrategiesService,
     private readonly keyManagerService: KeysManagerService,
+    private readonly logger: CustodyLogger,
   ) { }
 
   private async fillSignersPrivateKeys(
@@ -64,6 +66,8 @@ export class SigningTransactionService {
     dto: IPrivateServerSignContractTransaction,
   ): Promise<ICustodySignedContractTransaction> {
     const { corporateId, networkId } = dto;
+
+    this.logger.info(`Signing contract transaction for corporateId ${corporateId} on networkId ${networkId}`);
 
     const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
 
