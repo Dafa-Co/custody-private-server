@@ -9,12 +9,16 @@ import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-typ
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
 import { ICustodyMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
 import { IPrivateKeyFilledMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
+import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 
 @Injectable()
 export class EVMContractSignerStrategy implements IContractSignerStrategy {
   private web3: Web3;
 
-  constructor() {}
+  constructor(
+    private readonly logger: CustodyLogger,
+  ) {}
+
   signBurnTokenTransaction(dto: IPrivateKeyFilledMintOrBurnTokenTransaction): Promise<ICustodyMintOrBurnTokenTransaction> {
     throw new NotImplementedException('Method not implemented.');
   }
@@ -33,11 +37,15 @@ export class EVMContractSignerStrategy implements IContractSignerStrategy {
   ): Promise<ICustodySignedEVMContractTransaction> {
     const { data, gas, gasPrice } = dto;
 
+    this.logger.info(`Signing EVM contract transaction, gas: ${gas}, gasPrice: ${gasPrice}`);
+
     const sender = getSignerFromSigners(dto.signers, SignerTypeEnum.PAYER, true);
 
     const privateKey = sender.privateKey;
 
     const account = this.web3.eth.accounts.privateKeyToAccount(privateKey);
+
+    this.logger.info(`Signing transaction from account: ${account.address}`);
 
     const signedTx = await this.web3.eth.accounts.signTransaction(
       {
@@ -48,6 +56,8 @@ export class EVMContractSignerStrategy implements IContractSignerStrategy {
       },
       privateKey,
     );
+
+    this.logger.info(`Signed transaction: ${JSON.stringify(signedTx)}`);
 
     if (!signedTx.rawTransaction || !signedTx.transactionHash) {
       throw new InternalServerErrorException('Failed to sign transaction');
