@@ -5,19 +5,36 @@ import { IContractSignerStrategy } from '../contract-signer-strategy.interface';
 import { IPrivateKeyFilledSignSolanaContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
-import { Connection, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction } from '@solana/web3.js';
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import {
   createCreateMasterEditionV3Instruction,
   createCreateMetadataAccountV3Instruction,
   PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
-} from "@metaplex-foundation/mpl-token-metadata";
-import { createAssociatedTokenAccountInstruction, createInitializeMintInstruction, createMintToInstruction, createBurnInstruction, getAssociatedTokenAddress, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+} from '@metaplex-foundation/mpl-token-metadata';
+import {
+  createAssociatedTokenAccountInstruction,
+  createInitializeMintInstruction,
+  createMintToInstruction,
+  createBurnInstruction,
+  getAssociatedTokenAddress,
+  getMinimumBalanceForRentExemptMint,
+  MINT_SIZE,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
 import { IPrivateKeyFilledTransactionSigner } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import bs58 from 'bs58';
 import Decimal from 'decimal.js';
 import { IPrivateKeyFilledMintOrBurnSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
 import { ICustodyMintOrBurnSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
 import { InstructionType } from 'rox-custody_common-modules/libs/enums/contract-instruction-type.enum';
+import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
 @Injectable()
 export class SolanaContractSignerStrategy implements IContractSignerStrategy {
   private connection: Connection;
@@ -31,7 +48,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
 
   private recreateWalletFromPrivateKey(privateKey: string) {
     return Keypair.fromSecretKey(
-      Uint8Array.from(Buffer.from(privateKey, "base64"))
+      Uint8Array.from(Buffer.from(privateKey, 'base64')),
     );
   }
 
@@ -39,15 +56,15 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     dto: IPrivateKeyFilledSignSolanaContractTransaction,
     tokenMintAddress: PublicKey,
     ownerAddress: PublicKey,
-    payerAddress: PublicKey
+    payerAddress: PublicKey,
   ) {
     const [metadataPDA] = PublicKey.findProgramAddressSync(
       [
-        Buffer.from("metadata"),
+        Buffer.from('metadata'),
         TOKEN_METADATA_PROGRAM_ID.toBuffer(),
         tokenMintAddress.toBuffer(),
       ],
-      TOKEN_METADATA_PROGRAM_ID
+      TOKEN_METADATA_PROGRAM_ID,
     );
 
     return createCreateMetadataAccountV3Instruction(
@@ -72,32 +89,32 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
           isMutable: false, // false for immutable (perfect for NFTs)
           collectionDetails: null,
         },
-      }
+      },
     );
   }
 
   private createMasterEditionInstruction(
     tokenMintAddress: PublicKey,
     ownerAddress: PublicKey,
-    payerAddress: PublicKey
+    payerAddress: PublicKey,
   ) {
     const [metadataPDA] = PublicKey.findProgramAddressSync(
       [
-        Buffer.from("metadata"),
+        Buffer.from('metadata'),
         TOKEN_METADATA_PROGRAM_ID.toBuffer(),
         tokenMintAddress.toBuffer(),
       ],
-      TOKEN_METADATA_PROGRAM_ID
+      TOKEN_METADATA_PROGRAM_ID,
     );
 
     const [masterEditionPDA] = PublicKey.findProgramAddressSync(
       [
-        Buffer.from("metadata"),
+        Buffer.from('metadata'),
         TOKEN_METADATA_PROGRAM_ID.toBuffer(),
         tokenMintAddress.toBuffer(),
-        Buffer.from("edition"),
+        Buffer.from('edition'),
       ],
-      TOKEN_METADATA_PROGRAM_ID
+      TOKEN_METADATA_PROGRAM_ID,
     );
 
     // Master Edition marks it as a Non-Fungible token.
@@ -115,72 +132,92 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
         createMasterEditionArgs: {
           maxSupply: 0, // Non-expandable; typical for 1/1 NFTs
         },
-      }
+      },
     );
   }
 
-  private async concatenateTransactionInstructions(dto: IPrivateKeyFilledSignSolanaContractTransaction, payerKeyPair: Keypair, mintKeypair: Keypair, ownerKeyPair: Keypair, requiredLamportsForMint: number) {
+  private async concatenateTransactionInstructions(
+    dto: IPrivateKeyFilledSignSolanaContractTransaction,
+    payerKeyPair: Keypair,
+    mintKeypair: Keypair,
+    ownerKeyPair: Keypair,
+    requiredLamportsForMint: number,
+  ) {
     const recipientAddress = new PublicKey(dto.recipientAddress);
-    
+
     const instructions: TransactionInstruction[] = [];
-    
+
     // create mint account (token account), with required balance (in lamports) for a token account
-    instructions.push(SystemProgram.createAccount({
-      fromPubkey: payerKeyPair.publicKey, // to pay for account creation
-      newAccountPubkey: mintKeypair.publicKey, // token new address
-      space: MINT_SIZE,
-      lamports: requiredLamportsForMint,
-      programId: TOKEN_PROGRAM_ID,
-    }));
-
-    // initialize the token, passing the token program ID (also an account), to bind this account to it (in order to be recognized as a token)
-    instructions.push(createInitializeMintInstruction(
-      mintKeypair.publicKey,
-      dto.decimals,
-      ownerKeyPair.publicKey,
-      ownerKeyPair.publicKey,
-      TOKEN_PROGRAM_ID
-    ));
-
-    // mathematically derive recipient Associated Token Account public key from the token public address and recipient public key
-    const recipientATAPublicKey = await getAssociatedTokenAddress(
-      mintKeypair.publicKey, // mint
-      recipientAddress, // owner
-      false
+    instructions.push(
+      SystemProgram.createAccount({
+        fromPubkey: payerKeyPair.publicKey, // to pay for account creation
+        newAccountPubkey: mintKeypair.publicKey, // token new address
+        space: MINT_SIZE,
+        lamports: requiredLamportsForMint,
+        programId: TOKEN_PROGRAM_ID,
+      }),
     );
 
-    // create recipient Associated Token Account
-    instructions.push(createAssociatedTokenAccountInstruction(
-      payerKeyPair.publicKey, // payer
-      recipientATAPublicKey, // recipient associated token account
-      recipientAddress, // recipient public key (owner of the token account)
-      mintKeypair.publicKey // token mint address
-    ));
+    // initialize the token, passing the token program ID (also an account), to bind this account to it (in order to be recognized as a token)
+    instructions.push(
+      createInitializeMintInstruction(
+        mintKeypair.publicKey,
+        dto.decimals,
+        ownerKeyPair.publicKey,
+        ownerKeyPair.publicKey,
+        TOKEN_PROGRAM_ID,
+      ),
+    );
 
-    // create mint to instruction, passing the owner key pair as the mint authority, minting initial suuply to the recipient
-    instructions.push(createMintToInstruction(
-      mintKeypair.publicKey,
-      recipientATAPublicKey,
-      ownerKeyPair.publicKey,
-      BigInt(dto.initialSupply.toString()),
-    ));
+    if (DecimalsHelper.isFirstGreaterThanSecond(dto.initialSupply, 0)) {
+      // mathematically derive recipient Associated Token Account public key from the token public address and recipient public key
+      const recipientATAPublicKey = await getAssociatedTokenAddress(
+        mintKeypair.publicKey, // mint
+        recipientAddress, // owner
+        false,
+      );
+
+      // create recipient Associated Token Account
+      instructions.push(
+        createAssociatedTokenAccountInstruction(
+          payerKeyPair.publicKey, // payer
+          recipientATAPublicKey, // recipient associated token account
+          recipientAddress, // recipient public key (owner of the token account)
+          mintKeypair.publicKey, // token mint address
+        ),
+      );
+
+      // create mint to instruction, passing the owner key pair as the mint authority, minting initial suuply to the recipient
+      instructions.push(
+        createMintToInstruction(
+          mintKeypair.publicKey,
+          recipientATAPublicKey,
+          ownerKeyPair.publicKey,
+          BigInt(dto.initialSupply.toString()),
+        ),
+      );
+    }
 
     // create metadata instruction to add name, symbol, and JSON URI (includes description and image)
     // metaplex integrates with solana explorers to show this metadata in the token page
-    instructions.push(this.createMetadataInstruction(
-      dto,
-      mintKeypair.publicKey,
-      ownerKeyPair.publicKey,
-      payerKeyPair.publicKey
-    ));
+    instructions.push(
+      this.createMetadataInstruction(
+        dto,
+        mintKeypair.publicKey,
+        ownerKeyPair.publicKey,
+        payerKeyPair.publicKey,
+      ),
+    );
 
     if (dto.isNFT) {
       // create master edition instruction, required for NFT token to mark it as NFT with max supply 1
-      instructions.push(this.createMasterEditionInstruction(
-        mintKeypair.publicKey,
-        ownerKeyPair.publicKey,
-        payerKeyPair.publicKey
-      ));
+      instructions.push(
+        this.createMasterEditionInstruction(
+          mintKeypair.publicKey,
+          ownerKeyPair.publicKey,
+          payerKeyPair.publicKey,
+        ),
+      );
     }
 
     return instructions;
@@ -199,16 +236,25 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     return { payerKeyPair, ownerKeyPair, mintKeyPair };
   }
 
-  private async buildTransaction(dto: IPrivateKeyFilledSignSolanaContractTransaction, payerKeyPair: Keypair, mintKeyPair: Keypair, ownerKeyPair: Keypair) {
+  private async buildTransaction(
+    dto: IPrivateKeyFilledSignSolanaContractTransaction,
+    payerKeyPair: Keypair,
+    mintKeyPair: Keypair,
+    ownerKeyPair: Keypair,
+  ) {
     const requiredLamportsForMint = await getMinimumBalanceForRentExemptMint(
-      this.connection
+      this.connection,
     );
 
-    const instructions = await this.concatenateTransactionInstructions(dto, payerKeyPair, mintKeyPair, ownerKeyPair, requiredLamportsForMint);
-    
-    const transaction = new Transaction().add(
-      ...instructions,
+    const instructions = await this.concatenateTransactionInstructions(
+      dto,
+      payerKeyPair,
+      mintKeyPair,
+      ownerKeyPair,
+      requiredLamportsForMint,
     );
+
+    const transaction = new Transaction().add(...instructions);
 
     const { blockhash, lastValidBlockHeight } =
       await this.connection.getLatestBlockhash();
@@ -227,7 +273,14 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     payerKeyPair: Keypair,
     ownerKeyPair: Keypair,
   ) {
-    return await this.buildTokenInstruction(mintAddress, recipientAddress, InstructionType.MINT, payerKeyPair, amount, ownerKeyPair);
+    return await this.buildTokenInstruction(
+      mintAddress,
+      recipientAddress,
+      InstructionType.MINT,
+      payerKeyPair,
+      amount,
+      ownerKeyPair,
+    );
   }
 
   private async buildBurnFromExistingTransaction(
@@ -237,7 +290,14 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     payerKeyPair: Keypair,
     ownerKeyPair: Keypair,
   ) {
-    return await this.buildTokenInstruction(mintAddress, ownerAddress, InstructionType.BURN, payerKeyPair, amount, ownerKeyPair);
+    return await this.buildTokenInstruction(
+      mintAddress,
+      ownerAddress,
+      InstructionType.BURN,
+      payerKeyPair,
+      amount,
+      ownerKeyPair,
+    );
   }
 
   private async buildTokenInstruction(
@@ -254,7 +314,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     const targetATAPublicKey = await getAssociatedTokenAddress(
       mintAddress,
       targetPubKey,
-      false
+      false,
     );
 
     // ensure ATA exists (burn requires source account)
@@ -266,12 +326,12 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
           payerKeyPair.publicKey,
           targetATAPublicKey,
           targetPubKey,
-          mintAddress
-        )
+          mintAddress,
+        ),
       );
     }
 
-    if(type == InstructionType.BURN){
+    if (type == InstructionType.BURN) {
       // Burn tokens from target's ATA
       transaction.add(
         createBurnInstruction(
@@ -279,20 +339,21 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
           mintAddress,
           targetKeyPair.publicKey,
           BigInt(amount.toString()),
-        )
+        ),
       );
-    }else{
+    } else {
       transaction.add(
         createMintToInstruction(
           mintAddress,
           targetATAPublicKey,
           targetKeyPair.publicKey,
           BigInt(amount.toString()),
-        )
+        ),
       );
     }
 
-    const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
+    const { blockhash, lastValidBlockHeight } =
+      await this.connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash;
     transaction.lastValidBlockHeight = lastValidBlockHeight;
     transaction.feePayer = payerKeyPair.publicKey;
@@ -303,16 +364,23 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
   async signContractTransaction(
     dto: IPrivateKeyFilledSignSolanaContractTransaction,
   ): Promise<ICustodySignedSolanaContractTransaction> {
-    const { payerKeyPair, ownerKeyPair, mintKeyPair } = this.prepareSigners(dto.signers);
+    const { payerKeyPair, ownerKeyPair, mintKeyPair } = this.prepareSigners(
+      dto.signers,
+    );
 
-    const transaction = await this.buildTransaction(dto, payerKeyPair, mintKeyPair, ownerKeyPair);
+    const transaction = await this.buildTransaction(
+      dto,
+      payerKeyPair,
+      mintKeyPair,
+      ownerKeyPair,
+    );
 
     transaction.sign(payerKeyPair, mintKeyPair, ownerKeyPair);
 
     const rawTx = transaction.serialize();
 
-    const sigBase64 = transaction.signature.toString("base64");
-    const sigBytes = Buffer.from(sigBase64, "base64");
+    const sigBase64 = transaction.signature.toString('base64');
+    const sigBytes = Buffer.from(sigBase64, 'base64');
     const sigBase58 = bs58.encode(new Uint8Array(sigBytes));
 
     const estimatedFee = await transaction.getEstimatedFee(this.connection);
@@ -331,7 +399,14 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
   ): Promise<ICustodyMintOrBurnSolanaTokenTransaction> {
     const { payerKeyPair, ownerKeyPair } = this.prepareSigners(dto.signers);
 
-    return await this.signTokenTransaction(payerKeyPair, ownerKeyPair, dto.contractAddress, dto.recipientAddress, dto.amount, InstructionType.MINT);
+    return await this.signTokenTransaction(
+      payerKeyPair,
+      ownerKeyPair,
+      dto.contractAddress,
+      dto.recipientAddress,
+      dto.amount,
+      InstructionType.MINT,
+    );
   }
 
   async signBurnTokenTransaction(
@@ -339,7 +414,14 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
   ): Promise<ICustodyMintOrBurnSolanaTokenTransaction> {
     const { payerKeyPair, ownerKeyPair } = this.prepareSigners(dto.signers);
 
-    return await this.signTokenTransaction(payerKeyPair, ownerKeyPair, dto.contractAddress, dto.recipientAddress, dto.amount, InstructionType.BURN);
+    return await this.signTokenTransaction(
+      payerKeyPair,
+      ownerKeyPair,
+      dto.contractAddress,
+      dto.recipientAddress,
+      dto.amount,
+      InstructionType.BURN,
+    );
   }
 
   private async signTokenTransaction(
@@ -348,10 +430,10 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     contractAddress: string,
     recipientAddress: string,
     amount: Decimal,
-    type: InstructionType
-  ){
-    let transaction: Transaction
-    if(type == InstructionType.MINT) {
+    type: InstructionType,
+  ) {
+    let transaction: Transaction;
+    if (type == InstructionType.MINT) {
       transaction = await this.buildMintToExistingTransaction(
         new PublicKey(contractAddress),
         recipientAddress,
@@ -359,7 +441,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
         payerKeyPair,
         ownerKeyPair,
       );
-    }else{
+    } else {
       transaction = await this.buildBurnFromExistingTransaction(
         new PublicKey(contractAddress),
         recipientAddress,
@@ -373,8 +455,8 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
 
     const rawTx = transaction.serialize();
 
-    const sigBase64 = transaction.signature.toString("base64");
-    const sigBytes = Buffer.from(sigBase64, "base64");
+    const sigBase64 = transaction.signature.toString('base64');
+    const sigBytes = Buffer.from(sigBase64, 'base64');
     const sigBase58 = bs58.encode(new Uint8Array(sigBytes));
 
     const estimatedFee = await transaction.getEstimatedFee(this.connection);
