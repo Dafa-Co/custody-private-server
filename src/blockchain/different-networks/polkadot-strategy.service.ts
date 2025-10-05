@@ -20,6 +20,8 @@ import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-js
 import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/custody-logger.service";
 import { getSignerFromSigners } from "src/utils/helpers/get-signer-from-signers.helper";
 import { SignerTypeEnum } from "rox-custody_common-modules/libs/enums/signer-type.enum";
+import { split, combine } from "shamirs-secret-sharing";
+import { isDefined } from "class-validator";
 
 export class PolkadotStrategyService implements IBlockChainPrivateServer {
     private asset: CommonAsset;
@@ -139,5 +141,29 @@ export class PolkadotStrategyService implements IBlockChainPrivateServer {
     ): Promise<any> {
         // Solana does not support swap transactions in the same way as other blockchains.
         throw new Error('Polkadot does not support swap transactions.');
+    }
+
+    async splitToShares(privateKey: string, percentageToStoreInCustody: number, backupStorages: number): Promise<string[]> {
+        if (isDefined(percentageToStoreInCustody) && percentageToStoreInCustody > 0) {
+            backupStorages += 1;
+        }
+
+        const privateKeyBuffer = Buffer.from(privateKey.replace(/^0x/, ""), "hex");
+
+        const shares = await await split(
+            privateKeyBuffer,
+            {
+                shares: backupStorages,
+                threshold: backupStorages - 1
+            }
+        );
+
+        return shares
+    }
+
+    async combineShares(shares: string[]): Promise<string> {
+        const fullPrivateKey = await combine(shares);
+
+        return `0x${fullPrivateKey.toString("hex")}`;
     }
 }

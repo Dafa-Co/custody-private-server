@@ -21,4 +21,12 @@ export interface IBlockChainPrivateServer {
   getSignedSwapTransaction(
     dto: PrivateKeyFilledSignSwapTransactionDto,
   ): Promise<CustodySignedTransaction>;
+  splitToShares(
+    privateKey: string,
+    percentageToStoreInCustody: number,
+    backupStorages: number
+  ): Promise<string[]>;
+  combineShares(
+    shares: string[]
+  ): Promise<string>;
 }

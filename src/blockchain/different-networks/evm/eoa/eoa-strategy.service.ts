@@ -25,6 +25,8 @@ import {
     toBytes,
 } from "viem";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
+import { split, combine } from "shamirs-secret-sharing";
+import { isDefined } from "class-validator";
 
 @Injectable()
 export class EoaStrategyService implements IBlockChainPrivateServer {
@@ -144,5 +146,29 @@ export class EoaStrategyService implements IBlockChainPrivateServer {
 
     getSignedSwapTransaction(dto: PrivateKeyFilledSignSwapTransactionDto): Promise<CustodySignedTransaction> {
         throw new InternalServerErrorException('Swapping is not supported yet for this protocol');
+    }
+
+    async splitToShares(privateKey: string, percentageToStoreInCustody: number, backupStorages: number): Promise<string[]> {
+        if (isDefined(percentageToStoreInCustody) && percentageToStoreInCustody > 0) {
+            backupStorages += 1;
+        }
+
+        const privateKeyBuffer = Buffer.from(privateKey.replace(/^0x/, ""), "hex");
+
+        const shares = await await split(
+            privateKeyBuffer,
+            {
+                shares: backupStorages,
+                threshold: backupStorages - 1
+            }
+        );
+
+        return shares
+    }
+
+    async combineShares(shares: string[]): Promise<string> {
+        const fullPrivateKey = await combine(shares);
+
+        return `0x${fullPrivateKey.toString("hex")}`;
     }
 }

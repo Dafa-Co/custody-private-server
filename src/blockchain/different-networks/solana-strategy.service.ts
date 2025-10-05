@@ -37,6 +37,8 @@ import { softJsonStringify } from 'rox-custody_common-modules/libs/utils/soft-js
 import Decimal from 'decimal.js';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
+import { split, combine } from "shamirs-secret-sharing";
+import { isDefined } from 'class-validator';
 
 @Injectable()
 export class SolanaStrategyService implements IBlockChainPrivateServer {
@@ -258,5 +260,29 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     ): Promise<any> {
         // Solana does not support swap transactions in the same way as other blockchains.
         throw new Error('Solana does not support swap transactions.');
+    }
+
+    async splitToShares(privateKey: string, percentageToStoreInCustody: number, backupStorages: number): Promise<string[]> {
+        if (isDefined(percentageToStoreInCustody) && percentageToStoreInCustody > 0) {
+            backupStorages += 1;
+        }
+
+        const privateKeyBuffer = Buffer.from(privateKey, "utf8");
+
+        const shares = await await split(
+            privateKeyBuffer,
+            {
+                shares: backupStorages,
+                threshold: backupStorages - 1
+            }
+        );
+
+        return shares;
+    }
+
+    async combineShares(shares: string[]): Promise<string> {
+        const fullPrivateKey = await combine(shares);
+
+        return fullPrivateKey.toString("utf8");
     }
 }

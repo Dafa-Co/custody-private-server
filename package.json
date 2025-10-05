@@ -80,6 +80,7 @@
     "redlock": "^5.0.0-beta.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "shamirs-secret-sharing": "^2.0.1",
     "tiny-secp256k1": "^2.2.3",
     "ton": "^13.9.0",
     "tronweb": "^6.0.0",

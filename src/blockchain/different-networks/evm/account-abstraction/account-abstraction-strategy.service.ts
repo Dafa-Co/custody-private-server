@@ -32,6 +32,9 @@ import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/c
 import { HexString } from 'rox-custody_common-modules/libs/types/hex-string.type';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
+import { split, combine } from "shamirs-secret-sharing";
+import { isDefined } from 'class-validator';
+
 
 @Injectable()
 export class AccountAbstractionStrategyService
@@ -495,5 +498,29 @@ export class AccountAbstractionStrategyService
     signature: HexString
   ): HexString {
     return EvmHelper.concatHex([transactionData, signatureLengthInHex, signature]);
+  }
+
+  async splitToShares(privateKey: string, percentageToStoreInCustody: number, backupStorages: number): Promise<string[]> {
+    if (isDefined(percentageToStoreInCustody) && percentageToStoreInCustody > 0) {
+      backupStorages += 1;
+    }
+
+    const privateKeyBuffer = Buffer.from(privateKey.replace(/^0x/, ""), "hex");
+
+    const shares = await await split(
+      privateKeyBuffer,
+      {
+        shares: backupStorages,
+        threshold: backupStorages - 1
+      }
+    );
+
+    return shares
+  }
+
+  async combineShares(shares: string[]): Promise<string> {
+    const fullPrivateKey = await combine(shares);
+
+    return `0x${fullPrivateKey.toString("hex")}`;
   }
 }

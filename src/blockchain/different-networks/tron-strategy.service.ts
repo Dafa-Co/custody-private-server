@@ -18,6 +18,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
+import { split, combine } from "shamirs-secret-sharing";
+import { isDefined } from 'class-validator';
 
 const tronHeaders = { 'TRON-PRO-API-KEY': configs.TRON_API_KEY };
 
@@ -63,7 +65,7 @@ export class TronStrategyService implements IBlockChainPrivateServer {
       const sender = getSignerFromSigners(dto.signers, SignerTypeEnum.SENDER, true);
 
       const privateKey = sender.privateKey;
-      
+
       this.tronWeb.setPrivateKey(privateKey);
       const signedTransaction =
         this.asset.type === AssetType.COIN
@@ -144,5 +146,28 @@ export class TronStrategyService implements IBlockChainPrivateServer {
   ): Promise<any> {
     // Tron does not support swap transactions in the same way as other blockchains.
     throw new Error('Tron does not support swap transactions.');
+  }
+
+  async splitToShares(privateKey: string, percentageToStoreInCustody: number, backupStorages: number): Promise<string[]> {
+    if (isDefined(percentageToStoreInCustody) && percentageToStoreInCustody > 0) {
+      backupStorages += 1;
+    }
+
+    const privateKeyBuffer = Buffer.from(privateKey, "utf8");
+
+    const shares = await await split(
+      privateKeyBuffer,
+      {
+        shares: backupStorages,
+        threshold: backupStorages - 1
+      }
+    );
+    return shares;
+  }
+
+  async combineShares(shares: string[]): Promise<string> {
+    const fullPrivateKey = await combine(shares);
+
+    return fullPrivateKey.toString("utf8");
   }
 }
