@@ -123,27 +123,4 @@ export class XrpStrategyService implements IBlockChainPrivateServer {
     getSignedSwapTransaction(dto: SignTransactionDto): Promise<CustodySignedTransaction> {
         throw new Error("Method not implemented.");
     }
-
-    async splitToShares(privateKey: string, percentageToStoreInCustody: number, backupStorages: number): Promise<string[]> {
-        if (isDefined(percentageToStoreInCustody) && percentageToStoreInCustody > 0) {
-            backupStorages += 1;
-        }
-
-        const privateKeyBuffer = Buffer.from(privateKey, "utf8");
-
-        const shares = await await split(
-            privateKeyBuffer,
-            {
-                shares: backupStorages,
-                threshold: backupStorages - 1
-            }
-        );
-        return shares;
-    }
-
-    async combineShares(shares: string[]): Promise<string> {
-        const fullPrivateKey = await combine(shares);
-
-        return fullPrivateKey.toString("utf8");
-    }
 }

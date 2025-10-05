@@ -10,6 +10,8 @@ import { IdempotentKeyEntity } from './entities/idempotent-key.entity';
 import { isDefined } from 'class-validator';
 import { v4 as uuidv4 } from 'uuid';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
+import { split, combine } from "shamirs-secret-sharing";
+import { supportedNetworks } from 'rox-custody_common-modules/blockchain/global-commons/supported-networks.enum';
 
 @Injectable()
 export class KeysManagerService {
@@ -66,10 +68,11 @@ export class KeysManagerService {
     const wallet = await blockchainFactory.createWallet();
     const { address, privateKey, eoaAddress } = wallet;
 
-    const shares = await blockchainFactory.splitToShares(
+    const shares = await this.splitKeyToShares(
       privateKey,
       percentageToStoreInCustody,
-      backupStorages
+      backupStorages,
+      asset.networkId
     );
 
     const encryptedPrivateKey = await this.corporateKey.encryptData(corporateId, privateKey);
@@ -149,5 +152,142 @@ export class KeysManagerService {
       .where('id = :keyId', { keyId })
       .andWhere('createdAt < NOW() + INTERVAL 10 MINUTE')
       .execute();
+  }
+
+  async splitKeyToShares(
+    privateKey: string,
+    percentageToStoreInCustody: number,
+    backupStorages: number,
+    networkId: number
+  ): Promise<string[]> {
+    if ((!isDefined(backupStorages) || backupStorages == 0)) {
+      backupStorages = 1
+    } else if (isDefined(percentageToStoreInCustody) && percentageToStoreInCustody > 0) {
+      backupStorages += 1;
+    }
+
+    switch (networkId) {
+      case supportedNetworks.Ethereum:
+      case supportedNetworks.Polygon:
+      case supportedNetworks.BSC:
+      case supportedNetworks.Arbitrum_One:
+      case supportedNetworks.Optimism:
+      case supportedNetworks.Avalanche:
+      case supportedNetworks.Base:
+      case supportedNetworks.Scroll:
+      case supportedNetworks.Gnosis:
+      case supportedNetworks.sepolia:
+      case supportedNetworks.baseSepolia:
+      case supportedNetworks.polkadot:
+      case supportedNetworks.polkadotWestend: {
+        return await this.generateCustodySharesFromHex(privateKey, backupStorages);
+      }
+
+      case supportedNetworks.bitcoin:
+      case supportedNetworks.bitcoinTestnet:
+      case supportedNetworks.tron:
+      case supportedNetworks.shastaTestnet:
+      case supportedNetworks.solana:
+      case supportedNetworks.solanaDevnet:
+      case supportedNetworks.xrp:
+      case supportedNetworks.xrpTestnet:
+      case supportedNetworks.tronNileTestnet:
+      case supportedNetworks.stellar:
+      case supportedNetworks.stellarTestnet:
+      case supportedNetworks.roxChain:
+      case supportedNetworks.roxChainDevnet: {
+        return await this.generateCustodySharesFromUtf8(privateKey, backupStorages);
+      }
+
+      default:
+        throw new Error('Unsupported network')
+        break;
+    }
+  }
+
+  private async generateCustodySharesFromHex(
+    privateKey: string,
+    backupStorages: number
+  ) {
+    const privateKeyBuffer = Buffer.from(privateKey.replace(/^0x/, ""), "hex");
+
+    const shares = await split(
+      privateKeyBuffer,
+      {
+        shares: backupStorages,
+        threshold: backupStorages - 1 == 0 ? 1 : backupStorages - 1
+      }
+    );
+
+    return shares
+  }
+
+  private async generateCustodySharesFromUtf8(
+    privateKey: string,
+    backupStorages: number
+  ) {
+    const privateKeyBuffer = Buffer.from(privateKey, "utf8");
+
+    const shares = await split(
+      privateKeyBuffer,
+      {
+        shares: backupStorages,
+        threshold: backupStorages - 1
+      }
+    );
+
+    return shares;
+  }
+
+  private async combinePrivateKeyFromHexShares(shares: string[]) {
+    const fullPrivateKey = await combine(shares);
+
+    return `0x${fullPrivateKey.toString("hex")}`;
+  }
+
+  private async combinePrivateKeyFromUtf8Shares(shares: string[]) {
+    const fullPrivateKey = await combine(shares);
+
+    return fullPrivateKey.toString("utf8");
+  }
+
+  async combineSharesToFullPrivateKey(shares: string[], networkId: number): Promise<string> {
+    switch (networkId) {
+      case supportedNetworks.Ethereum:
+      case supportedNetworks.Polygon:
+      case supportedNetworks.BSC:
+      case supportedNetworks.Arbitrum_One:
+      case supportedNetworks.Optimism:
+      case supportedNetworks.Avalanche:
+      case supportedNetworks.Base:
+      case supportedNetworks.Scroll:
+      case supportedNetworks.Gnosis:
+      case supportedNetworks.sepolia:
+      case supportedNetworks.baseSepolia:
+      case supportedNetworks.polkadot:
+      case supportedNetworks.polkadotWestend: {
+        return await this.combinePrivateKeyFromHexShares(shares);
+      }
+
+      case supportedNetworks.bitcoin:
+      case supportedNetworks.bitcoinTestnet:
+      case supportedNetworks.tron:
+      case supportedNetworks.shastaTestnet:
+      case supportedNetworks.solana:
+      case supportedNetworks.solanaDevnet:
+      case supportedNetworks.xrp:
+      case supportedNetworks.xrpTestnet:
+      case supportedNetworks.tronNileTestnet:
+      case supportedNetworks.stellar:
+      case supportedNetworks.stellarTestnet:
+      case supportedNetworks.roxChain:
+      case supportedNetworks.roxChainDevnet: {
+        return await this.combinePrivateKeyFromUtf8Shares(shares);
+      }
+
+      default:
+        throw new Error('Unsupported network')
+        break;
+    }
   }
 }

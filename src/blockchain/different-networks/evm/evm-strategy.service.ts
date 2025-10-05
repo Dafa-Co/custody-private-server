@@ -49,12 +49,4 @@ export class EVMStrategyService implements IBlockChainPrivateServer {
     getSignedTransaction(dto: PrivateKeyFilledSignTransactionDto): Promise<CustodySignedTransaction> {
         return this.strategy.getSignedTransaction(dto);
     }
-
-    async splitToShares(privateKey: string, percentageToStoreInCustody: number, backupStorages: number): Promise<string[]> {
-        return this.strategy.splitToShares(privateKey, percentageToStoreInCustody, backupStorages);
-    }
-
-    async combineShares(shares: string[]): Promise<string> {
-        return this.strategy.combineShares(shares);
-    }
 }

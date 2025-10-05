@@ -142,28 +142,4 @@ export class PolkadotStrategyService implements IBlockChainPrivateServer {
         // Solana does not support swap transactions in the same way as other blockchains.
         throw new Error('Polkadot does not support swap transactions.');
     }
-
-    async splitToShares(privateKey: string, percentageToStoreInCustody: number, backupStorages: number): Promise<string[]> {
-        if (isDefined(percentageToStoreInCustody) && percentageToStoreInCustody > 0) {
-            backupStorages += 1;
-        }
-
-        const privateKeyBuffer = Buffer.from(privateKey.replace(/^0x/, ""), "hex");
-
-        const shares = await await split(
-            privateKeyBuffer,
-            {
-                shares: backupStorages,
-                threshold: backupStorages - 1
-            }
-        );
-
-        return shares
-    }
-
-    async combineShares(shares: string[]): Promise<string> {
-        const fullPrivateKey = await combine(shares);
-
-        return `0x${fullPrivateKey.toString("hex")}`;
-    }
 }
