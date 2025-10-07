@@ -58,10 +58,9 @@ export class KeysManagerService {
     const {
       asset,
       corporateId,
-      apiApprovalEssential: { percentageToStoreInCustody },
+      apiApprovalEssential: { percentageToStoreInCustody, backupStoragesIds },
       idempotentKey: idk,
       protocol,
-      backupStorages,
     } = dto;
 
     const idempotentKey = idk ?? uuidv4();
@@ -82,7 +81,7 @@ export class KeysManagerService {
     const shares = await this.splitKeyToShares(
       privateKey,
       percentageToStoreInCustody,
-      backupStorages,
+      backupStoragesIds.length,
       asset.networkId
     );
 
