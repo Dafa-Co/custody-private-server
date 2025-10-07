@@ -28,16 +28,28 @@ export class KeysManagerService {
 
   private getKeysParts(
     percentageToStoreInCustody: number,
-    encryptedPrivateKey: string,
+    encryptedPrivateKeyShares: string[],
   ) {
-    const custodyPartLength = Math.floor(encryptedPrivateKey.length * (percentageToStoreInCustody / 100));
-    const custodyPart = encryptedPrivateKey.substring(0, custodyPartLength);
-    const backupStoragePrivateKey = encryptedPrivateKey.substring(custodyPartLength);
+    const shouldStoreInCustody =
+      isDefined(percentageToStoreInCustody) && percentageToStoreInCustody > 0;
+
+    const shares = Array.isArray(encryptedPrivateKeyShares)
+      ? [...encryptedPrivateKeyShares]
+      : [];
+
+    if (!shouldStoreInCustody) {
+      return {
+        backupStoragesParts: shares,
+        custodyPart: '',
+      };
+    }
+
+    const custodyPart = shares.shift() ?? '';
 
     return {
-      backupStoragesPart: backupStoragePrivateKey,
+      backupStoragesParts: shares,
       custodyPart,
-    }
+    };
   }
 
   async generateKeyPair(
@@ -52,7 +64,6 @@ export class KeysManagerService {
       backupStorages,
     } = dto;
 
-    console.log("generateWallet", dto)
     const idempotentKey = idk ?? uuidv4();
 
     await this.idempotentKeyRepository
@@ -75,11 +86,11 @@ export class KeysManagerService {
       asset.networkId
     );
 
-    const encryptedPrivateKey = await this.corporateKey.encryptData(corporateId, privateKey);
+    const encryptedPrivateKeyShares = await this.corporateKey.encryptData(corporateId, shares);
 
-    const keysParts = this.getKeysParts(
+    const { custodyPart, backupStoragesParts } = this.getKeysParts(
       percentageToStoreInCustody,
-      encryptedPrivateKey,
+      encryptedPrivateKeyShares,
     );
 
     return this.dataSource.transaction(async (manager) => {
@@ -103,7 +114,7 @@ export class KeysManagerService {
         .createQueryBuilder('private_key')
         .insert()
         .values({
-          private_key: keysParts.custodyPart,
+          private_key: custodyPart,
         })
         .execute();
 
@@ -123,25 +134,33 @@ export class KeysManagerService {
         address,
         keyId: savedPrivateKey.identifiers[0].id,
         eoaAddress,
-        backupStoragesPart: keysParts.backupStoragesPart,
+        backupStoragesParts,
       };
     });
   }
 
-  async getFullPrivateKey(keyId: number, keyPart: string, corporateId: number): Promise<string> {
-    const privateKey = await this.privateKeyRepository.findOne({
+  async getFullPrivateKey(keyId: number, keyPart: string[], corporateId: number, networkId: number): Promise<string> {
+    const sharesToReturnPrivateKey: string[] = [];
+
+    const custodyShare = await this.privateKeyRepository.findOne({
       where: {
         id: keyId,
       },
     });
 
-    if (!privateKey) {
+    if (!custodyShare) {
       throw new BadRequestException('Private key not found');
     }
 
-    const encryptedPrivateKey = privateKey.private_key + keyPart;
+    sharesToReturnPrivateKey.push(custodyShare.private_key);
 
-    return await this.corporateKey.decryptData(corporateId, encryptedPrivateKey);
+    if (isDefined(keyPart) && keyPart.length > 0) {
+      sharesToReturnPrivateKey.push(...keyPart);
+    }
+
+    const decryptedShares = await this.corporateKey.decryptData(corporateId, sharesToReturnPrivateKey);
+
+    return await this.combineSharesToFullPrivateKey(decryptedShares, networkId);
   }
 
   async cleanUpPrivateKey(keyId: number): Promise<void> {
@@ -211,7 +230,7 @@ export class KeysManagerService {
   ) {
     const privateKeyBuffer = Buffer.from(privateKey.replace(/^0x/, ""), "hex");
 
-    const shares = await split(
+    const shares: Buffer[] = await split(
       privateKeyBuffer,
       {
         shares: backupStorages,
@@ -219,7 +238,9 @@ export class KeysManagerService {
       }
     );
 
-    return shares
+    const stringShares = shares.map((share: Buffer) => share.toString("base64"));
+
+    return stringShares
   }
 
   private async generateCustodySharesFromUtf8(
@@ -228,25 +249,29 @@ export class KeysManagerService {
   ) {
     const privateKeyBuffer = Buffer.from(privateKey, "utf8");
 
-    const shares = await split(
+    const shares: Buffer[] = await split(
       privateKeyBuffer,
       {
         shares: backupStorages,
-        threshold: backupStorages - 1
+        threshold: backupStorages - 1 == 0 ? 1 : backupStorages - 1
       }
     );
 
-    return shares;
+    const stringShares = shares.map((share: Buffer) => share.toString("base64"));
+
+    return stringShares
   }
 
   private async combinePrivateKeyFromHexShares(shares: string[]) {
-    const fullPrivateKey = await combine(shares);
+    const shareBuffers = shares.map((share) => Buffer.from(share, "base64"));
+    const fullPrivateKey = await combine(shareBuffers);
 
     return `0x${fullPrivateKey.toString("hex")}`;
   }
 
   private async combinePrivateKeyFromUtf8Shares(shares: string[]) {
-    const fullPrivateKey = await combine(shares);
+    const shareBuffers = shares.map((share) => Buffer.from(share, "base64"));
+    const fullPrivateKey = await combine(shareBuffers);
 
     return fullPrivateKey.toString("utf8");
   }

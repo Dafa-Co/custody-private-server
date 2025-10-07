@@ -10,7 +10,7 @@ export class CorporatePrivateKeysService {
   constructor(
     @InjectRepository(CorporateKeyEntity)
     private readonly corporateRepository: Repository<CorporateKeyEntity>,
-  ) {}
+  ) { }
 
   // Function to generate key pair
   async generateKeyPair(): Promise<{
@@ -58,39 +58,51 @@ export class CorporatePrivateKeysService {
   }
 
   // Encrypt data using public key
-  async encryptData(corporateId: number, data: string): Promise<string> {
+  async encryptData(
+    corporateId: number,
+    data: string[],
+  ): Promise<string[]> {
     const corporate = await this.ensureKeysExist(corporateId);
+    const payload = Array.isArray(data) ? data : [data];
 
-    const encryptedData = crypto.publicEncrypt(
-      corporate.publicKey,
-      Buffer.from(data, 'utf8'),
-    );
+    return payload.map((item) => {
+      const encrypted = crypto.publicEncrypt(
+        corporate.publicKey,
+        Buffer.from(item, 'utf8'),
+      );
 
-    return encryptedData.toString('base64');
+      return encrypted.toString('base64');
+    });
   }
 
   // Decrypt data using private key
   async decryptData(
     corporateId: number,
-    encryptedData: string,
-  ): Promise<string> {
+    encryptedData: string[],
+  ): Promise<string[]> {
+    const sanitizedEncryptedData = encryptedData.filter(
+      (item) => typeof item === 'string' && item.trim().length > 0,
+    );
 
-    // if the string is empty return an empty string
-    if (!encryptedData) {
-      return '';
+    if (sanitizedEncryptedData.length === 0) {
+      return [];
     }
 
     try {
       const corporate = await this.ensureKeysExist(corporateId);
 
-      const decryptedData = crypto.privateDecrypt(
-        {
-          key: corporate.privateKey,
-        },
-        Buffer.from(encryptedData, 'base64'),
-      );
+      const decryptCipher = (cipher: string) => {
+        const decryptedData = crypto.privateDecrypt(
+          {
+            key: corporate.privateKey,
+          },
+          Buffer.from(cipher, 'base64'),
+        );
 
-      return decryptedData.toString('utf8');
+        return decryptedData.toString('utf8');
+      };
+
+      return sanitizedEncryptedData.map(decryptCipher);
     } catch (error) {
       console.log("error", error);
       throw new InvalidPartOfPrivateKey();

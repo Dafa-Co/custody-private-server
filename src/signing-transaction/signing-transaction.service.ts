@@ -29,6 +29,7 @@ export class SigningTransactionService {
   private async fillSignersPrivateKeys(
     signers: IPrivateServerTransactionSigner[],
     corporateId: number,
+    networkId: number
   ): Promise<IPrivateKeyFilledTransactionSigner[]> {
     return Promise.all(
       signers.map(async (signer) => {
@@ -36,6 +37,7 @@ export class SigningTransactionService {
           signer.keyId,
           signer.keyPart,
           corporateId,
+          networkId
         );
 
         return {
@@ -51,7 +53,7 @@ export class SigningTransactionService {
   ): Promise<CustodySignedTransaction> {
     const { asset, corporateId, protocol } = dto;
 
-    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId, asset.networkId);
 
     const blockchainFactory =
       await this.blockchainFactoriesService.getStrategy(asset, protocol);
@@ -69,7 +71,7 @@ export class SigningTransactionService {
 
     this.logger.info(`Signing contract transaction for corporateId ${corporateId} on networkId ${networkId}`);
 
-    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId, networkId);
 
     const contractSignerStrategy =
       await this.contractSignerFactory.getContractSignerStrategy(networkId);
@@ -87,7 +89,7 @@ export class SigningTransactionService {
   ): Promise<ICustodyMintOrBurnTokenTransaction> {
     const { corporateId, networkId } = dto;
 
-    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId, networkId);
 
     const contractSignerStrategy =
       await this.contractSignerFactory.getContractSignerStrategy(networkId);
@@ -105,7 +107,7 @@ export class SigningTransactionService {
   ): Promise<ICustodyMintOrBurnTokenTransaction> {
     const { corporateId, networkId } = dto;
 
-    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId, networkId);
 
     const contractSignerStrategy =
       await this.contractSignerFactory.getContractSignerStrategy(networkId);
@@ -123,7 +125,7 @@ export class SigningTransactionService {
   ): Promise<CustodySignedTransaction> {
     const { asset, corporateId, protocol } = dto;
 
-    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId, asset.networkId);
 
     const blockchainFactory =
       await this.blockchainFactoriesService.getStrategy(asset, protocol);
