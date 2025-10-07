@@ -32,8 +32,6 @@ import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/c
 import { HexString } from 'rox-custody_common-modules/libs/types/hex-string.type';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
-import { split, combine } from "shamirs-secret-sharing";
-import { isDefined } from 'class-validator';
 
 
 @Injectable()

@@ -20,8 +20,6 @@ import { softJsonStringify } from "rox-custody_common-modules/libs/utils/soft-js
 import { CustodyLogger } from "rox-custody_common-modules/libs/services/logger/custody-logger.service";
 import { getSignerFromSigners } from "src/utils/helpers/get-signer-from-signers.helper";
 import { SignerTypeEnum } from "rox-custody_common-modules/libs/enums/signer-type.enum";
-import { split, combine } from "shamirs-secret-sharing";
-import { isDefined } from "class-validator";
 
 export class PolkadotStrategyService implements IBlockChainPrivateServer {
     private asset: CommonAsset;

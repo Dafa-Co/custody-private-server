@@ -37,8 +37,6 @@ import { softJsonStringify } from 'rox-custody_common-modules/libs/utils/soft-js
 import Decimal from 'decimal.js';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
-import { split, combine } from "shamirs-secret-sharing";
-import { isDefined } from 'class-validator';
 
 @Injectable()
 export class SolanaStrategyService implements IBlockChainPrivateServer {

@@ -18,8 +18,6 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { SignerTypeEnum } from 'rox-custody_common-modules/libs/enums/signer-type.enum';
 import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.helper';
-import { split, combine } from "shamirs-secret-sharing";
-import { isDefined } from 'class-validator';
 
 const tronHeaders = { 'TRON-PRO-API-KEY': configs.TRON_API_KEY };
 
