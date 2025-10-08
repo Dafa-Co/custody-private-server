@@ -35,7 +35,7 @@ export class SigningTransactionService {
       signers.map(async (signer) => {
         const privateKey = await this.keyManagerService.getFullPrivateKey(
           signer.keyId,
-          signer.keyPart,
+          signer.keyParts,
           corporateId,
           networkId
         );
