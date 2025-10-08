@@ -25,8 +25,6 @@ import {
     toBytes,
 } from "viem";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
-import { split, combine } from "shamirs-secret-sharing";
-import { isDefined } from "class-validator";
 
 @Injectable()
 export class EoaStrategyService implements IBlockChainPrivateServer {

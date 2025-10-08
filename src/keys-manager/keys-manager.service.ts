@@ -12,6 +12,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
 import { split, combine } from "shamirs-secret-sharing";
 import { supportedNetworks } from 'rox-custody_common-modules/blockchain/global-commons/supported-networks.enum';
+import { get } from 'http';
+import { getChain } from '@biconomy/account';
+import { getChainFromNetwork } from 'rox-custody_common-modules/blockchain/global-commons/get-network-chain';
+import { NetworkCategory } from 'rox-custody_common-modules/blockchain/global-commons/networks-category';
 
 @Injectable()
 export class KeysManagerService {
@@ -138,7 +142,7 @@ export class KeysManagerService {
     });
   }
 
-  async getFullPrivateKey(keyId: number, keyPart: string[], corporateId: number, networkId: number): Promise<string> {
+  async getFullPrivateKey(keyId: number, keyParts: string[], corporateId: number, networkId: number): Promise<string> {
     const sharesToReturnPrivateKey: string[] = [];
 
     const custodyShare = await this.privateKeyRepository.findOne({
@@ -153,8 +157,8 @@ export class KeysManagerService {
 
     sharesToReturnPrivateKey.push(custodyShare.private_key);
 
-    if (isDefined(keyPart) && keyPart.length > 0) {
-      sharesToReturnPrivateKey.push(...keyPart);
+    if (isDefined(keyParts) && keyParts.length > 0) {
+      sharesToReturnPrivateKey.push(...keyParts);
     }
 
     const decryptedShares = await this.corporateKey.decryptData(corporateId, sharesToReturnPrivateKey);
@@ -184,36 +188,22 @@ export class KeysManagerService {
       backupStorages += 1;
     }
 
-    switch (networkId) {
-      case supportedNetworks.Ethereum:
-      case supportedNetworks.Polygon:
-      case supportedNetworks.BSC:
-      case supportedNetworks.Arbitrum_One:
-      case supportedNetworks.Optimism:
-      case supportedNetworks.Avalanche:
-      case supportedNetworks.Base:
-      case supportedNetworks.Scroll:
-      case supportedNetworks.Gnosis:
-      case supportedNetworks.sepolia:
-      case supportedNetworks.baseSepolia:
-      case supportedNetworks.polkadot:
-      case supportedNetworks.polkadotWestend: {
+    const fullNetworkData = getChainFromNetwork(networkId);
+    const networkCategory = fullNetworkData.category;
+
+    switch (networkCategory) {
+      case NetworkCategory.EVM:
+      case NetworkCategory.Polkadot: {
         return await this.generateCustodySharesFromHex(privateKey, backupStorages);
       }
 
-      case supportedNetworks.bitcoin:
-      case supportedNetworks.bitcoinTestnet:
-      case supportedNetworks.tron:
-      case supportedNetworks.shastaTestnet:
-      case supportedNetworks.solana:
-      case supportedNetworks.solanaDevnet:
-      case supportedNetworks.xrp:
-      case supportedNetworks.xrpTestnet:
-      case supportedNetworks.tronNileTestnet:
-      case supportedNetworks.stellar:
-      case supportedNetworks.stellarTestnet:
-      case supportedNetworks.roxChain:
-      case supportedNetworks.roxChainDevnet: {
+      case NetworkCategory.BitCoin:
+      case NetworkCategory.BitcoinTest:
+      case NetworkCategory.Tron:
+      case NetworkCategory.Solana:
+      case NetworkCategory.Xrp:
+      case NetworkCategory.Stellar:
+      case NetworkCategory.RoxChain: {
         return await this.generateCustodySharesFromUtf8(privateKey, backupStorages);
       }
 
@@ -276,36 +266,22 @@ export class KeysManagerService {
   }
 
   async combineSharesToFullPrivateKey(shares: string[], networkId: number): Promise<string> {
-    switch (networkId) {
-      case supportedNetworks.Ethereum:
-      case supportedNetworks.Polygon:
-      case supportedNetworks.BSC:
-      case supportedNetworks.Arbitrum_One:
-      case supportedNetworks.Optimism:
-      case supportedNetworks.Avalanche:
-      case supportedNetworks.Base:
-      case supportedNetworks.Scroll:
-      case supportedNetworks.Gnosis:
-      case supportedNetworks.sepolia:
-      case supportedNetworks.baseSepolia:
-      case supportedNetworks.polkadot:
-      case supportedNetworks.polkadotWestend: {
+    const fullNetworkData = getChainFromNetwork(networkId);
+    const networkCategory = fullNetworkData.category;
+
+    switch (networkCategory) {
+      case NetworkCategory.EVM:
+      case NetworkCategory.Polkadot: {
         return await this.combinePrivateKeyFromHexShares(shares);
       }
 
-      case supportedNetworks.bitcoin:
-      case supportedNetworks.bitcoinTestnet:
-      case supportedNetworks.tron:
-      case supportedNetworks.shastaTestnet:
-      case supportedNetworks.solana:
-      case supportedNetworks.solanaDevnet:
-      case supportedNetworks.xrp:
-      case supportedNetworks.xrpTestnet:
-      case supportedNetworks.tronNileTestnet:
-      case supportedNetworks.stellar:
-      case supportedNetworks.stellarTestnet:
-      case supportedNetworks.roxChain:
-      case supportedNetworks.roxChainDevnet: {
+      case NetworkCategory.BitCoin:
+      case NetworkCategory.BitcoinTest:
+      case NetworkCategory.Tron:
+      case NetworkCategory.Solana:
+      case NetworkCategory.Xrp:
+      case NetworkCategory.Stellar:
+      case NetworkCategory.RoxChain: {
         return await this.combinePrivateKeyFromUtf8Shares(shares);
       }
 
