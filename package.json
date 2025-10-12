@@ -29,6 +29,7 @@
   "dependencies": {
     "@biconomy/account": "^4.5.3",
     "@golevelup/nestjs-rabbitmq": "~5.4.1",
+    "@mysten/sui": "^1.37.4",
     "@metaplex-foundation/mpl-token-metadata": "^2.13.0",
     "@nestjs/class-transformer": "^0.4.0",
     "@nestjs/class-validator": "^0.13.4",
@@ -56,6 +57,7 @@
     "axios": "^1.7.7",
     "bcryptjs": "^2.4.3",
     "bip32": "^4.0.0",
+    "bip39": "^3.1.0",
     "bitcoinjs-lib": "^6.1.6",
     "bitcore-lib": "^10.0.28",
     "bitcore-mnemonic": "^10.0.28",
