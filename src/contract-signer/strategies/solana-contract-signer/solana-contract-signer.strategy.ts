@@ -285,14 +285,14 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
 
   private async buildBurnFromExistingTransaction(
     mintAddress: PublicKey,
-    ownerAddress: string,
+    recipientAddress: string,
     amount: Decimal,
     payerKeyPair: Keypair,
     ownerKeyPair: Keypair,
   ) {
     return await this.buildTokenInstruction(
       mintAddress,
-      ownerAddress,
+      recipientAddress,
       InstructionType.BURN,
       payerKeyPair,
       amount,
@@ -306,7 +306,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     type: InstructionType,
     payerKeyPair: Keypair,
     amount: Decimal,
-    targetKeyPair: Keypair,
+    ownerKeyPair: Keypair,
   ) {
     const targetPubKey = new PublicKey(targetAddress);
     const transaction = new Transaction();
@@ -337,7 +337,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
         createBurnInstruction(
           targetATAPublicKey,
           mintAddress,
-          targetKeyPair.publicKey,
+          targetPubKey,
           BigInt(amount.toString()),
         ),
       );
@@ -346,7 +346,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
         createMintToInstruction(
           mintAddress,
           targetATAPublicKey,
-          targetKeyPair.publicKey,
+          ownerKeyPair.publicKey,
           BigInt(amount.toString()),
         ),
       );
