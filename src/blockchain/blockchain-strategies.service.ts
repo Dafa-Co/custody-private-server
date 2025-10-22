@@ -15,6 +15,7 @@ import { PolkadotStrategyService } from './different-networks/polkadot-strategy.
 import { StellarStrategyService } from './different-networks/stellar-strategy.service';
 import { WalletProtocols } from 'rox-custody_common-modules/libs/enums/wallets-protocols.enum';
 import { EVMStrategyService } from './different-networks/evm/evm-strategy.service';
+import { RoxChainStrategyService } from './different-networks/roxChain-strategy.service';
 
 @Injectable()
 export class BlockchainFactoriesService {
@@ -51,6 +52,10 @@ export class BlockchainFactoriesService {
 
       case NetworkCategory.Solana:
         strategy = new SolanaStrategyService(this.logger);
+        break;
+
+      case NetworkCategory.RoxChain:
+        strategy = new RoxChainStrategyService(this.logger);
         break;
 
       case NetworkCategory.Xrp:
