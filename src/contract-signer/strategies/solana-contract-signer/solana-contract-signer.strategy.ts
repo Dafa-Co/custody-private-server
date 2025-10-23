@@ -16,6 +16,7 @@ import {
 import {
   createCreateMasterEditionV3Instruction,
   createCreateMetadataAccountV3Instruction,
+  createVerifyCollectionInstruction,
   PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
 } from '@metaplex-foundation/mpl-token-metadata';
 import {
@@ -35,6 +36,8 @@ import { IPrivateKeyFilledMintOrBurnSolanaTokenTransaction } from 'rox-custody_c
 import { ICustodyMintOrBurnSolanaTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
 import { InstructionType } from 'rox-custody_common-modules/libs/enums/contract-instruction-type.enum';
 import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
+import { isDefined } from 'class-validator';
+
 @Injectable()
 export class SolanaContractSignerStrategy implements IContractSignerStrategy {
   private connection: Connection;
@@ -67,6 +70,10 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
       TOKEN_METADATA_PROGRAM_ID,
     );
 
+    const collectionField = isDefined(dto.parentTokenAddress)
+      ? { key: new PublicKey(dto.parentTokenAddress), verified: false }
+      : null;
+
     return createCreateMetadataAccountV3Instruction(
       {
         metadata: metadataPDA,
@@ -83,10 +90,10 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
             uri: dto.metadataURI,
             sellerFeeBasisPoints: 0, // e.g. 500%, creators array will get 5% out of any sale happens in any marketplace (advisory field, they are not required to do this)
             creators: null,
-            collection: null,
+            collection: collectionField,
             uses: null,
           },
-          isMutable: false, // false for immutable (perfect for NFTs)
+          isMutable: dto.isCollection,
           collectionDetails: null,
         },
       },
@@ -134,6 +141,50 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
         },
       },
     );
+  }
+
+  private createCreateVerifyCollectionInstruction(
+    nftMintAddress: PublicKey,
+    collectionMintAddress: PublicKey,
+    collectionAuthorityAddress: PublicKey,
+    payerPubkey: PublicKey,
+  ) {
+    const [nftMetadataPDA] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from('metadata'),
+        TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+        nftMintAddress.toBuffer(),
+      ],
+      TOKEN_METADATA_PROGRAM_ID,
+    );
+
+    const [collectionMetadataPDA] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from('metadata'),
+        TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+        collectionMintAddress.toBuffer(),
+      ],
+      TOKEN_METADATA_PROGRAM_ID,
+    );
+
+    const [collectionMasterEditionPDA] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from('metadata'),
+        TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+        collectionMintAddress.toBuffer(),
+        Buffer.from('edition'),
+      ],
+      TOKEN_METADATA_PROGRAM_ID,
+    );
+
+    return createVerifyCollectionInstruction({
+      metadata: nftMetadataPDA,
+      collectionAuthority: collectionAuthorityAddress,
+      payer: payerPubkey,
+      collectionMint: collectionMintAddress,
+      collection: collectionMetadataPDA,
+      collectionMasterEditionAccount: collectionMasterEditionPDA,
+    });
   }
 
   private async concatenateTransactionInstructions(
@@ -218,6 +269,17 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
           payerKeyPair.publicKey,
         ),
       );
+
+      if (isDefined(dto.parentTokenAddress)) {
+        instructions.push(
+          this.createCreateVerifyCollectionInstruction(
+            mintKeypair.publicKey,
+            new PublicKey(dto.parentTokenAddress),
+            ownerKeyPair.publicKey,
+            payerKeyPair.publicKey,
+          )
+        )
+      }
     }
 
     return instructions;
