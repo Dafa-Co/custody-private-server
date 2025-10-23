@@ -143,7 +143,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
     );
   }
 
-  private createCreateVerifyCollectionInstruction(
+  private createVerifyCollectionItemInstruction(
     nftMintAddress: PublicKey,
     collectionMintAddress: PublicKey,
     collectionAuthorityAddress: PublicKey,
@@ -272,7 +272,7 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
 
       if (isDefined(dto.parentTokenAddress)) {
         instructions.push(
-          this.createCreateVerifyCollectionInstruction(
+          this.createVerifyCollectionItemInstruction(
             mintKeypair.publicKey,
             new PublicKey(dto.parentTokenAddress),
             ownerKeyPair.publicKey,
