@@ -46,6 +46,10 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
     private commitment: Commitment = 'finalized';
     private connection: Connection;
 
+    constructor(
+        private readonly logger: CustodyLogger
+    ) { }
+
     async init(initData: InitBlockChainPrivateServerStrategies): Promise<void> {
         const { asset } = initData;
         const networkObject = getChainFromNetwork(asset.networkId);
@@ -98,6 +102,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
                     );
                     break;
                 case AssetType.TOKEN:
+                case AssetType.CUSTOM_TOKEN:
                     signedTransaction = await this.getSignedTransactionToken(
                         senderPrivateKey,
                         to,
@@ -105,6 +110,10 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
                         payerPrivateKey,
                     );
                     break;
+                default:
+                    throw new BadRequestException(
+                        `Unsupported asset type for Solana: ${this.asset.type}`,
+                    );
             }
 
 
@@ -115,6 +124,7 @@ export class SolanaStrategyService implements IBlockChainPrivateServer {
                 transactionId: transactionId,
             };
         } catch (error) {
+            this.logger.error(`Solana Transaction Signing error: ${error?.stack ?? error?.message}`);
             return {
                 bundlerUrl: this.host,
                 signedTransaction: null,
