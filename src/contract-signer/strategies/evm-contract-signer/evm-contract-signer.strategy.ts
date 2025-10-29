@@ -10,6 +10,8 @@ import { getSignerFromSigners } from 'src/utils/helpers/get-signer-from-signers.
 import { ICustodyMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
 import { IPrivateKeyFilledMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
 import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
+import { IPrivateKeyFilledTransferNFTTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-transfer-nft-transaction.interface';
+import { ICustodyTransferNFTTransaction } from 'rox-custody_common-modules/libs/interfaces/transfer-nft-transaction.interface';
 
 @Injectable()
 export class EVMContractSignerStrategy implements IContractSignerStrategy {
@@ -22,6 +24,7 @@ export class EVMContractSignerStrategy implements IContractSignerStrategy {
   signBurnTokenTransaction(dto: IPrivateKeyFilledMintOrBurnTokenTransaction): Promise<ICustodyMintOrBurnTokenTransaction> {
     throw new NotImplementedException('Method not implemented.');
   }
+
   signMintTokenTransaction(dto: IPrivateKeyFilledMintOrBurnTokenTransaction): Promise<ICustodyMintOrBurnTokenTransaction> {
     throw new NotImplementedException('Method not implemented');
   }
@@ -68,5 +71,9 @@ export class EVMContractSignerStrategy implements IContractSignerStrategy {
       transactionHash: signedTx.transactionHash,
       error: null,
     };
+  }
+
+  signTransferNFTTransaction(dto: IPrivateKeyFilledTransferNFTTransaction): Promise<ICustodyTransferNFTTransaction> {
+    throw new NotImplementedException('Method not implemented');
   }
 }

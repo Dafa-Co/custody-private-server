@@ -28,6 +28,7 @@ import {
   getMinimumBalanceForRentExemptMint,
   MINT_SIZE,
   TOKEN_PROGRAM_ID,
+  createTransferCheckedInstruction,
 } from '@solana/spl-token';
 import { IPrivateKeyFilledTransactionSigner } from 'rox-custody_common-modules/libs/interfaces/sign-transaction.interface';
 import bs58 from 'bs58';
@@ -37,6 +38,8 @@ import { ICustodyMintOrBurnSolanaTokenTransaction } from 'rox-custody_common-mod
 import { InstructionType } from 'rox-custody_common-modules/libs/enums/contract-instruction-type.enum';
 import { DecimalsHelper } from 'rox-custody_common-modules/libs/utils/decimals-helper';
 import { isDefined } from 'class-validator';
+import { IPrivateKeyFilledTransferSolanaNFTTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-transfer-nft-transaction.interface';
+import { ICustodyTransferSolanaNFTTransaction } from 'rox-custody_common-modules/libs/interfaces/transfer-nft-transaction.interface';
 
 @Injectable()
 export class SolanaContractSignerStrategy implements IContractSignerStrategy {
@@ -512,6 +515,93 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
         ownerKeyPair,
       );
     }
+
+    transaction.sign(payerKeyPair, ownerKeyPair);
+
+    const rawTx = transaction.serialize();
+
+    const sigBase64 = transaction.signature.toString('base64');
+    const sigBytes = Buffer.from(sigBase64, 'base64');
+    const sigBase58 = bs58.encode(new Uint8Array(sigBytes));
+
+    const estimatedFee = await transaction.getEstimatedFee(this.connection);
+
+    return {
+      transactionHash: sigBase58,
+      contractAddress: contractAddress,
+      signedTransaction: rawTx,
+      estimatedFee: new Decimal(estimatedFee),
+      error: null,
+    };
+  }
+
+  private async buildTransferNFTTransaction(
+    mintAddress: PublicKey,
+    recipientAddress: string,
+    payerKeyPair: Keypair,
+    ownerKeyPair: Keypair,
+  ) {
+    const targetPubKey = new PublicKey(recipientAddress);
+    const transaction = new Transaction();
+
+    const ownerATAPublicKey = await getAssociatedTokenAddress(
+      mintAddress,
+      ownerKeyPair.publicKey,
+      false,
+    );
+
+    const targetATAPublicKey = await getAssociatedTokenAddress(
+      mintAddress,
+      targetPubKey,
+      false,
+    );
+
+    // ensure ATA exists (burn requires source account)
+    const ataInfo = await this.connection.getAccountInfo(targetATAPublicKey);
+
+    if (!ataInfo) {
+      transaction.add(
+        createAssociatedTokenAccountInstruction(
+          payerKeyPair.publicKey,
+          targetATAPublicKey,
+          targetPubKey,
+          mintAddress,
+        ),
+      );
+    }
+
+    transaction.add(
+      createTransferCheckedInstruction(
+        ownerATAPublicKey,
+        mintAddress,
+        targetATAPublicKey,
+        ownerKeyPair.publicKey,
+        1,
+        0,
+      ),
+    );
+
+    const { blockhash, lastValidBlockHeight } =
+      await this.connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.lastValidBlockHeight = lastValidBlockHeight;
+    transaction.feePayer = payerKeyPair.publicKey;
+
+    return transaction;
+  }
+
+  async signTransferNFTTransaction(
+    dto: IPrivateKeyFilledTransferSolanaNFTTransaction,
+  ): Promise<ICustodyTransferSolanaNFTTransaction> {
+    const { contractAddress, recipientAddress } = dto;
+    const { payerKeyPair, ownerKeyPair } = this.prepareSigners(dto.signers);
+
+    const transaction = await this.buildTransferNFTTransaction(
+        new PublicKey(contractAddress),
+        recipientAddress,
+        payerKeyPair,
+        ownerKeyPair,
+      );
 
     transaction.sign(payerKeyPair, ownerKeyPair);
 
