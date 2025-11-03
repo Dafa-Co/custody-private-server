@@ -27,6 +27,7 @@
     "migration:show": "npm run typeorm -- migration:show -d src/configs/database.ts"
   },
   "dependencies": {
+    "@biconomy/abstractjs": "^1.0.21",
     "@biconomy/account": "^4.5.3",
     "@golevelup/nestjs-rabbitmq": "~5.4.1",
     "@metaplex-foundation/mpl-token-metadata": "^2.13.0",
@@ -86,7 +87,6 @@
     "typeorm": "^0.3.20",
     "typeorm-extension": "^3.5.0",
     "uuid": "^11.1.0",
-    "viem": "^2.30.1",
     "web3": "^4.7.0",
     "web3-validator": "^2.0.5",
     "xrpl": "^3.1.0"

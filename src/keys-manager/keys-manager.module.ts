@@ -8,10 +8,11 @@ import { CorporatePrivateKeysService } from './corporate-private-keys.service';
 import { CorporateKeyEntity } from './entities/corporate-key.entity';
 import { KeysManagerRmqController } from './keys-manager.controller.rmq';
 import { IdempotentKeyEntity } from './entities/idempotent-key.entity';
+import { PrivateKeyVersion } from './entities/private-key-version.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PrivateKeys, PrivateKeyNonce, CorporateKeyEntity, IdempotentKeyEntity]),
+    TypeOrmModule.forFeature([PrivateKeys, PrivateKeyNonce, CorporateKeyEntity, IdempotentKeyEntity, PrivateKeyVersion]),
     BlockchainModule
   ],
   controllers: [KeysManagerRmqController],
