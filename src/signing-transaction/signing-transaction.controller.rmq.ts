@@ -5,6 +5,7 @@ import { _MessagePatterns } from 'rox-custody_common-modules/libs/utils/microser
 import { RmqController } from 'rox-custody_common-modules/libs/decorators/rmq-controller.decorator';
 import { IPrivateServerSignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { IPrivateServerMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
+import { IPrivateServerTransferNFTTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-transfer-nft-transaction.interface';
 @RmqController()
 export class SigningTransactionRmqController {
   constructor(private readonly signingService: SigningTransactionService) { }
@@ -32,5 +33,10 @@ export class SigningTransactionRmqController {
   @MessagePattern({ cmd: _MessagePatterns.signSwapTransaction })
   async signSwapTransaction(@Payload() dto: PrivateServerSignSwapTransactionDto) {
     return this.signingService.signSwapTransaction(dto);
+  }
+
+  @MessagePattern({ cmd: _MessagePatterns.signTransferNFTTransaction })
+  async signTransferNFTTransaction(@Payload() dto: IPrivateServerTransferNFTTransaction) {
+    return this.signingService.signTransferNFTTransaction(dto);
   }
 }

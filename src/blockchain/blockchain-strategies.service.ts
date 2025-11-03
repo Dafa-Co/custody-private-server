@@ -55,7 +55,7 @@ export class BlockchainFactoriesService {
         break;
 
       case NetworkCategory.Solana:
-        strategy = new SolanaStrategyService();
+        strategy = new SolanaStrategyService(this.logger);
         break;
 
       case NetworkCategory.Xrp:

@@ -15,6 +15,9 @@ import { ICustodySignedContractTransaction } from 'rox-custody_common-modules/li
 import { IPrivateServerSignContractTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-contract-transaction.interface';
 import { ICustodyMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/mint-transaction.interface';
 import { IPrivateServerMintOrBurnTokenTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-mint-token-transaction.interface';
+import { CustodyLogger } from 'rox-custody_common-modules/libs/services/logger/custody-logger.service';
+import { IPrivateServerTransferNFTTransaction } from 'rox-custody_common-modules/libs/interfaces/sign-transfer-nft-transaction.interface';
+import { ICustodyTransferNFTTransaction } from 'rox-custody_common-modules/libs/interfaces/transfer-nft-transaction.interface';
 
 @Injectable()
 export class SigningTransactionService {
@@ -22,6 +25,7 @@ export class SigningTransactionService {
     private readonly blockchainFactoriesService: BlockchainFactoriesService,
     private readonly contractSignerFactory: ContractSignerStrategiesService,
     private readonly keyManagerService: KeysManagerService,
+    private readonly logger: CustodyLogger,
   ) { }
 
   private async fillSignersPrivateKeys(
@@ -44,7 +48,7 @@ export class SigningTransactionService {
     );
   }
 
-  async signTransaction(
+  async signTransaction( // TODO: use this
     dto: PrivateServerSignTransactionDto,
   ): Promise<CustodySignedTransaction> {
     const { asset, corporateId, protocol } = dto;
@@ -64,6 +68,8 @@ export class SigningTransactionService {
     dto: IPrivateServerSignContractTransaction,
   ): Promise<ICustodySignedContractTransaction> {
     const { corporateId, networkId } = dto;
+
+    this.logger.info(`Signing contract transaction for corporateId ${corporateId} on networkId ${networkId}`);
 
     const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
 
@@ -128,5 +134,23 @@ export class SigningTransactionService {
       ...dto,
       signers,
     });
+  }
+
+  async signTransferNFTTransaction(
+    dto: IPrivateServerTransferNFTTransaction,
+  ): Promise<ICustodyTransferNFTTransaction> {
+    const { corporateId, networkId } = dto;
+
+    const signers = await this.fillSignersPrivateKeys(dto.signers, corporateId);
+
+    const contractSignerStrategy =
+      await this.contractSignerFactory.getContractSignerStrategy(networkId);
+
+    return await contractSignerStrategy.signTransferNFTTransaction(
+      {
+        ...dto,
+        signers,
+      }
+    );
   }
 }
