@@ -92,7 +92,13 @@ export class SolanaContractSignerStrategy implements IContractSignerStrategy {
             symbol: dto.symbol,
             uri: dto.metadataURI,
             sellerFeeBasisPoints: 0, // e.g. 500%, creators array will get 5% out of any sale happens in any marketplace (advisory field, they are not required to do this)
-            creators: null,
+            creators: [
+              {
+                address: ownerAddress,
+                verified: true,
+                share: 100,
+              },
+            ],
             collection: collectionField,
             uses: null,
           },
